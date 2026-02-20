@@ -6,10 +6,10 @@
     <nav>
       <h1>Farm Clicker</h1>
       <header>
-        <div class="button">
+        <div class="stat">
           <p>Gold: --var--</p>
         </div>
-        <div class="button">
+        <div class="stat">
           <p>Time per click: --var--</p>
         </div>
       </header>
@@ -60,7 +60,6 @@
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-
 .app {
   height: 100%;
   display: flex;
@@ -91,6 +90,20 @@ header {
 }
 
 .button {
+  padding-left: 2rem; padding-right: 2rem;
+  padding-top: 1rem; padding-bottom: 1rem;
+  background-color: var(--button-color);
+  border: 4px solid var(--border-color);
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+
+  &:hover {
+    background-color: var(--button-hover-color);
+  }
+}
+.stat {
   padding-left: 2rem; padding-right: 2rem;
   padding-top: 1rem; padding-bottom: 1rem;
   background-color: var(--button-color);
@@ -167,5 +180,54 @@ header {
   background-image: url("./assets/Achievements_icon.png");
   background-size: contain;
   background-repeat: no-repeat;
+}
+@media (max-width: 1300px) {
+  .fields {
+    grid-template-columns: repeat(3, 100px);
+    grid-template-rows: repeat(3, 100px);
+  }
+  .button {
+    padding-left: 1rem; padding-right: 1rem;
+    padding-top: 0.5rem; padding-bottom: 0.5rem;
+    font-size: 0.8rem;
+  }
+  .stat {
+    padding-left: 1rem; padding-right: 1rem;
+    padding-top: 0.5rem; padding-bottom: 0.5rem;
+    font-size: 0.8rem;
+  }
+}
+@media (max-width: 1000px) {
+  .button {
+    p {
+      display: none;
+    }
+  }
+}
+@media (max-width: 700px) {
+  .fields {
+    grid-template-columns: repeat(3, 70px);
+    grid-template-rows: repeat(3, 70px);
+    padding: 1rem;
+  }
+  .shop, .settings, .market, .crops, .upgrades, .achievements {
+    height: 2rem;
+    width: 2rem;
+  }
+  .menuButtons {
+    position: relative;
+  }
+}
+@media (max-width: 540px) {
+  .mainPage {
+    flex-direction: column;
+    gap: 2rem;
+
+    .menuButtons {
+      flex-direction: row;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+  }
 }
 </style>
