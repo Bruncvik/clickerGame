@@ -1,12 +1,16 @@
 <script setup>
 defineProps({
-    value : String,
-    currency: String
+  value : [String, Number],
+    currency: String,
+    pulse: {
+      type: Boolean,
+      default: false
+    }
 })
 </script>
 
 <template>
-    <div class="stat">
+    <div class="stat" :class="{ pulse }">
         <p>{{ currency }}: {{ value }}</p>
     </div>
 </template>
@@ -31,6 +35,25 @@ defineProps({
     padding-left: 1rem; padding-right: 1rem;
     padding-top: 0.5rem; padding-bottom: 0.5rem;
     font-size: 0.8rem;
+  }
+}
+
+.pulse {
+  animation: goldPulse 0.35s ease;
+}
+
+@keyframes goldPulse {
+  0% {
+    transform: scale(1);
+    border-color: var(--border-color);
+  }
+  40% {
+    transform: scale(1.04);
+    border-color: #53d653;
+  }
+  100% {
+    transform: scale(1);
+    border-color: var(--border-color);
   }
 }
 @media (max-width: 600px) {
