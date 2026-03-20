@@ -114,7 +114,7 @@ onBeforeUnmount(() => {
       <h1>Farm Clicker</h1>
       <header>
         <StatBar :value="gameStore.money" currency="Gold" :pulse="goldPulse"/>
-        <StatBar value="3 minutes" currency="Time skip per click"/>
+        <StatBar :value="`${gameStore.timePerClickMinutes} minutes`" currency="Time skip per click"/>
       </header>
     </nav>
     <main class="mainPage">

@@ -36,6 +36,7 @@ const calculateFieldProgress = (
 const createDefaultState = () => ({
     money: 25,
     moneyPerClick: 1,
+    timePerClickMinutes: 5,
     autoClickers: 0,
     autoClickerCost: 10,
     now: Date.now(),
@@ -104,6 +105,7 @@ export const useGameStore = defineStore("game", {
             const stateToPersist = {
                 money: this.money,
                 moneyPerClick: this.moneyPerClick,
+                timePerClickMinutes: this.timePerClickMinutes,
                 autoClickers: this.autoClickers,
                 autoClickerCost: this.autoClickerCost,
                 totalSkippedMs: this.totalSkippedMs,
@@ -118,7 +120,7 @@ export const useGameStore = defineStore("game", {
             this.now = Date.now();
         },
         skipTime() {
-            const skipMs = (10 + Math.random() * 2) * 60 * 1000;
+            const skipMs = this.timePerClickMinutes * 60 * 1000;
             this.totalSkippedMs += skipMs;
             this.persistProgress();
         },
