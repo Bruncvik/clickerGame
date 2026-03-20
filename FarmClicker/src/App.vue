@@ -1,4 +1,111 @@
 <script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import MenuButton from "./components/MenuButton.vue";
+import ShopIcon from "./assets/Shop_icon.png";
+import CropsIcon from "./assets/Crops_icon.png";
+import UpgradesIcon from "./assets/Upgrades_icon.png";
+import MarketIcon from "./assets/Market_icon.png";
+import SettingsIcon from "./assets/Settings_icon.png";
+import AchievementsIcon from "./assets/Achievements_icon.png";
+import PotatoCrop1 from "./assets/PotatoCrop1.png";
+import PotatoCrop2 from "./assets/PotatoCrop2.png";
+import PotatoCrop3 from "./assets/PotatoCrop3.png";
+import CropField from "./components/CropField.vue";
+import StatBar from "./components/StatBar.vue";
+import CropShopPopup from "./components/CropShopPopup.vue";
+import { useGameStore } from "./stores/gameStore";
+
+const gameStore = useGameStore();
+const isShopOpen = ref(false);
+const goldPulse = ref(false);
+let timerId: number | null = null;
+let goldPulseTimeoutId: number | null = null;
+
+const cropImageById: Record<string, string[]> = {
+  potato_seed: [PotatoCrop1, PotatoCrop2, PotatoCrop3],
+};
+
+const popupCrops = computed(() => {
+  return gameStore.unlockedCrops.map((crop) => ({
+    id: crop.id,
+    name: crop.name,
+    cost: crop.cost,
+    icon: cropImageById[crop.id]?.[0] ?? PotatoCrop1,
+    canAfford: gameStore.money >= crop.cost,
+  }));
+});
+
+function toggleShop() {
+  isShopOpen.value = !isShopOpen.value;
+}
+
+function selectCrop(cropId: string) {
+  gameStore.selectCropForPlanting(cropId);
+}
+
+function selectField(fieldId: number) {
+  gameStore.plantSelectedCrop(fieldId);
+  isShopOpen.value = false;
+}
+
+function skipTime() {
+  gameStore.skipTime();
+}
+
+function getFieldCropImage(cropId: string | null, progress: number) {
+  if (!cropId) {
+    return null;
+  }
+
+  const stageImages = cropImageById[cropId];
+
+  if (!stageImages) {
+    return null;
+  }
+
+  if (progress >= 0.66) {
+    return stageImages[2] ?? stageImages[0] ?? null;
+  }
+
+  if (progress >= 0.33) {
+    return stageImages[1] ?? stageImages[0] ?? null;
+  }
+
+  return stageImages[0] ?? null;
+}
+
+onMounted(() => {
+  timerId = window.setInterval(() => {
+    gameStore.updateNow();
+    const gainedGold = gameStore.completeReadyFields();
+
+    if (gainedGold > 0) {
+      goldPulse.value = false;
+
+      if (goldPulseTimeoutId !== null) {
+        clearTimeout(goldPulseTimeoutId);
+      }
+
+      requestAnimationFrame(() => {
+        goldPulse.value = true;
+      });
+
+      goldPulseTimeoutId = window.setTimeout(() => {
+        goldPulse.value = false;
+      }, 350);
+    }
+  }, 1000);
+});
+
+onBeforeUnmount(() => {
+  if (timerId !== null) {
+    clearInterval(timerId);
+  }
+
+  if (goldPulseTimeoutId !== null) {
+    clearTimeout(goldPulseTimeoutId);
+  }
+});
 </script>
 
 <template>
@@ -6,53 +113,57 @@
     <nav>
       <h1>Farm Clicker</h1>
       <header>
-        <div class="stat">
-          <p>Gold: --var--</p>
-        </div>
-        <div class="stat">
-          <p>Time per click: --var--</p>
-        </div>
+        <StatBar :value="gameStore.money" currency="Gold" :pulse="goldPulse"/>
+        <StatBar :value="`${gameStore.timePerClickMinutes} minutes`" currency="Time per click"/>
       </header>
     </nav>
     <main class="mainPage">
       <section class="menuButtons">
-        <div class="button">
-          <p>achievements</p>
-          <div class="icon achievements"></div>
-        </div>
-        <div class="button">
-          <p>settings</p>
-          <div class="icon settings"></div>
-        </div>
+        <MenuButton
+         :title="'Achievements'"
+          :icon="AchievementsIcon"
+         />
+         <MenuButton
+         :title="'Settings'"
+          :icon="SettingsIcon"
+         />
       </section>
-      <section class="fields">
-        <div class="crop"></div>
-        <div class="crop"></div>
-        <div class="crop"></div>
-        <div></div>
-        <div></div>
-        <div></div>
-        <div></div>
-        <div></div>
-        <div></div>
+      <section class="fields" @click="skipTime">
+        <CropField
+          v-for="field in gameStore.fields"
+          :key="field.id"
+          :unlocked="field.unlocked"
+          :crop-image="getFieldCropImage(field.cropId, gameStore.fieldProgress(field.id))"
+          :progress="gameStore.fieldProgress(field.id)"
+          @select-field="selectField(field.id)"
+        />
       </section>
       <section class="menuButtons">
-        <div class="button">
-          <p>shop</p>
-          <div class="icon shop"></div>
+        <div class="shopAnchor">
+          <MenuButton
+           :title="'Shop'"
+            :icon="ShopIcon"
+            @click="toggleShop"
+           />
+          <CropShopPopup
+            v-if="isShopOpen"
+            :crops="popupCrops"
+            :selected-crop-id="gameStore.selectedCropId"
+            @select-crop="selectCrop"
+          />
         </div>
-        <div class="button">
-          <p>crops</p>
-          <div class="icon crops"></div>
-        </div>
-        <div class="button">
-          <p>upgrades</p>
-          <div class="icon upgrades"></div>
-        </div>
-        <div class="button">
-          <p>market</p>
-          <div class="icon market"></div>
-        </div>
+         <MenuButton
+         :title="'Crops'"
+          :icon="CropsIcon"
+         />
+         <MenuButton
+         :title="'Upgrades'"
+          :icon="UpgradesIcon"
+         />
+         <MenuButton
+         :title="'Market'"
+          :icon="MarketIcon"
+         />
       </section>
     </main>
   </article>
@@ -88,35 +199,6 @@ header {
   justify-content: space-between;
   gap: 5rem;
 }
-
-.button {
-  padding-left: 2rem; padding-right: 2rem;
-  padding-top: 1rem; padding-bottom: 1rem;
-  background-color: var(--button-color);
-  border: 4px solid var(--border-color);
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-
-  &:hover {
-    background-color: var(--button-hover-color);
-  }
-}
-.stat {
-  padding-left: 2rem; padding-right: 2rem;
-  padding-top: 1rem; padding-bottom: 1rem;
-  background-color: var(--button-color);
-  border: 4px solid var(--border-color);
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-
-  &:hover {
-    background-color: var(--button-hover-color);
-  }
-}
 .menuButtons {
   display: flex;
   flex-direction: column;
@@ -124,62 +206,17 @@ header {
   gap: 1rem;
   margin: 2rem;
 }
+
+.shopAnchor {
+  position: relative;
+}
+
 .fields {
   display: grid;
   grid-template-columns: repeat(3, 150px);
   grid-template-rows: repeat(3, 150px);
   gap: 1rem;
   padding: 3rem;
-
-  div {
-    height: 100%;
-    width: 100%;
-    border: 4px solid black;
-    box-sizing: border-box;
-  }
-
-  div:nth-child(1n + 4) {
-    background-color: rgba(128, 128, 128, 0.419);
-  }
-}
-.icon {
-  height: 3rem;
-  width: 3rem;
-  margin-right: 0.5rem;
-}
-.shop {
-  background-image: url("./assets/Shop_icon.png");
-  background-size: contain;
-  background-repeat: no-repeat;
-}
-.settings {
-  background-image: url("./assets/Settings_icon.png");
-  background-size: contain;
-  background-repeat: no-repeat;
-}
-.market {
-  background-image: url("./assets/Market_icon.png");
-  background-size: contain;
-  background-repeat: no-repeat;
-}
-.crops {
-  background-image: url("./assets/Crops_icon.png");
-  background-size: contain;
-  background-repeat: no-repeat;
-}
-.crop {
-  background-image: url("./assets/PotatoCrop.png");
-  background-size: cover;
-}
-.upgrades {
-  background-image: url("./assets/Upgrades_icon.png");
-  background-size: contain;
-  background-repeat: no-repeat;
-}
-.achievements {
-  background-image: url("./assets/Achievements_icon.png");
-  background-size: contain;
-  background-repeat: no-repeat;
 }
 @media (max-width: 1300px) {
   .fields {
@@ -191,18 +228,6 @@ header {
     padding-top: 0.5rem; padding-bottom: 0.5rem;
     font-size: 0.8rem;
   }
-  .stat {
-    padding-left: 1rem; padding-right: 1rem;
-    padding-top: 0.5rem; padding-bottom: 0.5rem;
-    font-size: 0.8rem;
-  }
-}
-@media (max-width: 1000px) {
-  .button {
-    p {
-      display: none;
-    }
-  }
 }
 @media (max-width: 700px) {
   .fields {
@@ -210,15 +235,11 @@ header {
     grid-template-rows: repeat(3, 70px);
     padding: 1rem;
   }
-  .shop, .settings, .market, .crops, .upgrades, .achievements {
-    height: 2rem;
-    width: 2rem;
-  }
   .menuButtons {
     position: relative;
   }
 }
-@media (max-width: 540px) {
+@media (max-width: 600px) {
   .mainPage {
     flex-direction: column;
     gap: 2rem;
@@ -228,6 +249,10 @@ header {
       gap: 1rem;
       flex-wrap: wrap;
     }
+  }
+  header {
+    flex-direction: column;
+     gap: 1rem;
   }
 }
 </style>
