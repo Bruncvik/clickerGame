@@ -37,7 +37,6 @@ const props = defineProps({
 .icon {
   height: 3rem;
   width: 3rem;
-  margin-right: 0.5rem;
   background-size: contain;
   background-repeat: no-repeat;
 }

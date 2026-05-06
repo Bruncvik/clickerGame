@@ -3,6 +3,7 @@
   --border-color: #3e442b;
   --bg-color: #E8E1CA;
   --button-hover-color: #c9a15b;
+  --button-selected-color: #dba953;
 }
 
 body {
@@ -10,8 +11,7 @@ body {
   padding: 0;
 }
 #app {
-  width: 100vw;
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   justify-content: space-between;

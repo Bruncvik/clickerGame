@@ -1,44 +1,44 @@
 <script setup lang="ts">
-type CropPopupItem = {
+type CropUnlockItem = {
   id: string;
   name: string;
   cost: number;
   icon: string;
+  unlocked: boolean;
   canAfford: boolean;
 };
 
 defineProps<{
-  crops: CropPopupItem[];
-  selectedCropId: string | null;
+  crops: CropUnlockItem[];
 }>();
 
 const emit = defineEmits<{
-  selectCrop: [cropId: string];
+  buyCrop: [cropId: string];
 }>();
 </script>
 
 <template>
-  <aside class="shopPopup">
-    <h3>Crops</h3>
+  <aside class="cropPopup">
+    <h3>Unlock Crops</h3>
     <div class="cropIcons">
       <button
         v-for="crop in crops"
         :key="crop.id"
         class="cropButton"
-        :class="{ selected: selectedCropId === crop.id }"
-        :disabled="!crop.canAfford"
-        @click="emit('selectCrop', crop.id)"
+        :class="{ unlocked: crop.unlocked }"
+        :disabled="!crop.canAfford || crop.unlocked"
+        @click="emit('buyCrop', crop.id)"
       >
         <span>{{ crop.name }}</span>
         <div class="icon" :style="{ backgroundImage: `url(${crop.icon})` }"></div>
-        <span>{{ crop.cost }}</span>
+        <span>{{ crop.unlocked ? 'Owned' : crop.cost }}</span>
       </button>
     </div>
   </aside>
 </template>
 
 <style scoped>
-.shopPopup {
+.cropPopup {
   position: absolute;
   right: 100%;
   top: 0;
@@ -72,14 +72,13 @@ h3 {
   gap: 0.25rem;
   padding: 0.25rem;
   cursor: pointer;
-
 }
 
 .cropButton:hover {
   background-color: var(--button-hover-color);
 }
 
-.cropButton.selected {
+.cropButton.unlocked {
   background-color: var(--button-selected-color);
 }
 
@@ -93,9 +92,6 @@ h3 {
   height: 42px;
   background-size: cover;
   background-position: center;
-  &:hover {
-    background-color: (var(--button-hover-color));
-  }
 }
 
 span {
@@ -103,7 +99,7 @@ span {
 }
 
 @media (max-width: 700px) {
-  .shopPopup {
+  .cropPopup {
     right: auto;
     top: auto;
     bottom: calc(100% + 0.5rem);
@@ -111,14 +107,10 @@ span {
     margin-right: 0;
   }
 }
+
 @media (max-width: 600px) {
-  .shopPopup {
+  .cropPopup {
     left: 50%;
-  }
-}
-@media (max-width:530px) {
-  .shopPopup {
-    left: 100%;
   }
 }
 </style>

@@ -1,5 +1,7 @@
 <script setup>
-defineProps({
+import { computed } from 'vue';
+
+const props = defineProps({
   value : [String, Number],
     currency: String,
     pulse: {
@@ -7,11 +9,18 @@ defineProps({
       default: false
     }
 })
+
+const displayValue = computed(() => {
+  if (typeof props.value === 'number') {
+    return Math.round(props.value * 100) / 100;
+  }
+  return props.value;
+})
 </script>
 
 <template>
     <div class="stat" :class="{ pulse }">
-        <p>{{ currency }}: {{ value }}</p>
+        <p>{{ currency }}: {{ displayValue }}</p>
     </div>
 </template>
 
