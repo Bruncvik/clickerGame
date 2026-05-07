@@ -36,16 +36,17 @@ function handleClick(event: Event) {
 .field {
     height: 100%;
     width: 100%;
-    border: 4px solid black;
+    border: 4px solid rgb(121, 84, 0);
     box-sizing: border-box;
     background-size: cover;
     background-position: center;
     position: relative;
     cursor: pointer;
+    background-image: url(../assets/Field_bg.png);
 }
 
 .locked {
-  background-color: rgba(128, 128, 128, 0.419);
+  background-image: url(../assets/LockedField_bg.png);
   cursor: not-allowed;
 }
 
