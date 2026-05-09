@@ -102,6 +102,7 @@ const createDefaultState = () => ({
     totalHarvests: 0,
     earnedAchievementIds: [] as string[],
     pendingAchievements: [] as string[],
+    fieldEvents: [] as { id: string; fieldId: number; type: 'golden' | 'withered'; expiresAt: number }[],
     cropShopItems: [
         {
             id: "potato_seed",
@@ -177,7 +178,7 @@ const createDefaultState = () => ({
             id: "field_3",
             name: "Field 3",
             description: "Unlock field 3",
-            cost: 300,
+            cost: 500,
             purchased: false,
             type: "field",
         },
@@ -185,7 +186,7 @@ const createDefaultState = () => ({
             id: "field_4",
             name: "Field 4",
             description: "Unlock field 4",
-            cost: 600,
+            cost: 1500,
             purchased: false,
             type: "field",
         },
@@ -193,7 +194,7 @@ const createDefaultState = () => ({
             id: "field_5",
             name: "Field 5",
             description: "Unlock field 5",
-            cost: 1200,
+            cost: 5000,
             purchased: false,
             type: "field",
         },
@@ -201,7 +202,7 @@ const createDefaultState = () => ({
             id: "field_6",
             name: "Field 6",
             description: "Unlock field 6",
-            cost: 2500,
+            cost: 15000,
             purchased: false,
             type: "field",
         },
@@ -209,7 +210,7 @@ const createDefaultState = () => ({
             id: "field_7",
             name: "Field 7",
             description: "Unlock field 7",
-            cost: 5000,
+            cost: 50000,
             purchased: false,
             type: "field",
         },
@@ -217,7 +218,7 @@ const createDefaultState = () => ({
             id: "field_8",
             name: "Field 8",
             description: "Unlock field 8",
-            cost: 10000,
+            cost: 150000,
             purchased: false,
             type: "field",
         },
@@ -225,39 +226,39 @@ const createDefaultState = () => ({
             id: "field_9",
             name: "Field 9",
             description: "Unlock field 9",
-            cost: 20000,
+            cost: 500000,
             purchased: false,
             type: "field",
         },
         {
             id: "time_boost_1",
             name: "Time Boost I",
-            description: "+5 min per click",
-            cost: 100,
+            description: "×2 time per click (5→10 min)",
+            cost: 200,
             purchased: false,
             type: "boost",
         },
         {
             id: "time_boost_2",
             name: "Time Boost II",
-            description: "+5 min per click",
-            cost: 250,
+            description: "×2 time per click (10→20 min)",
+            cost: 800,
             purchased: false,
             type: "boost",
         },
         {
             id: "time_boost_3",
             name: "Time Boost III",
-            description: "+5 min per click",
-            cost: 500,
+            description: "×2 time per click (20→40 min)",
+            cost: 3000,
             purchased: false,
             type: "boost",
         },
         {
             id: "time_boost_4",
             name: "Time Boost IV",
-            description: "+5 min per click",
-            cost: 1000,
+            description: "×2 time per click (40→80 min)",
+            cost: 12000,
             purchased: false,
             type: "boost",
         },
@@ -265,7 +266,7 @@ const createDefaultState = () => ({
             id: "income_boost_1",
             name: "Income Boost I",
             description: "+0.0025 gold/sec",
-            cost: 75,
+            cost: 400,
             purchased: false,
             type: "income",
         },
@@ -273,7 +274,7 @@ const createDefaultState = () => ({
             id: "income_boost_2",
             name: "Income Boost II",
             description: "+0.05 gold/sec",
-            cost: 200,
+            cost: 3000,
             purchased: false,
             type: "income",
         },
@@ -281,7 +282,7 @@ const createDefaultState = () => ({
             id: "income_boost_3",
             name: "Income Boost III",
             description: "+0.5 gold/sec",
-            cost: 400,
+            cost: 20000,
             purchased: false,
             type: "income",
         },
@@ -289,7 +290,7 @@ const createDefaultState = () => ({
             id: "auto_person",
             name: "Farmhand (Person)",
             description: "Clicks once per second for you",
-            cost: 50,
+            cost: 250,
             purchased: false,
             type: "auto",
             quantity: 0,
@@ -298,7 +299,7 @@ const createDefaultState = () => ({
             id: "auto_tractor",
             name: "Tractor",
             description: "Clicks 3 times per second",
-            cost: 300,
+            cost: 2500,
             purchased: false,
             type: "auto",
             quantity: 0,
@@ -307,7 +308,7 @@ const createDefaultState = () => ({
             id: "auto_harvester",
             name: "Harvester",
             description: "Clicks 10 times per second",
-            cost: 2000,
+            cost: 20000,
             purchased: false,
             type: "auto",
             quantity: 0,
@@ -373,6 +374,43 @@ const loadInitialState = () => {
 export const useGameStore = defineStore("game", {
     state: () => loadInitialState(),
     actions: {
+        spawnFieldEvent() {
+            const eligible = this.fields.filter(f =>
+                f.unlocked && f.cropId &&
+                !this.fieldEvents.some(e => e.fieldId === f.id)
+            );
+            if (eligible.length === 0) return;
+            const field = eligible[Math.floor(Math.random() * eligible.length)]!;
+            const type = Math.random() < 0.5 ? 'golden' : 'withered';
+            this.fieldEvents.push({
+                id: Math.random().toString(36).substring(2, 9),
+                fieldId: field.id,
+                type,
+                expiresAt: Date.now() + (type === 'withered' ? 45_000 : 90_000),
+            });
+        },
+        resolveFieldEvent(fieldId: number): 'golden' | 'withered' | null {
+            const idx = this.fieldEvents.findIndex(e => e.fieldId === fieldId);
+            if (idx === -1) return null;
+            const type = this.fieldEvents[idx]!.type;
+            this.fieldEvents.splice(idx, 1);
+            return type;
+        },
+        tickFieldEvents() {
+            const now = Date.now();
+            const expired = this.fieldEvents.filter(e => e.expiresAt <= now);
+            for (const ev of expired) {
+                if (ev.type === 'withered') {
+                    const field = this.fields.find(f => f.id === ev.fieldId);
+                    if (field) {
+                        field.cropId = null;
+                        field.plantedAt = null;
+                        field.plantedSkippedMs = null;
+                    }
+                }
+            }
+            this.fieldEvents = this.fieldEvents.filter(e => e.expiresAt > now);
+        },
         persistProgress() {
             if (typeof window === "undefined") {
                 return;
@@ -497,7 +535,10 @@ export const useGameStore = defineStore("game", {
                 }
 
                 const isCritical = Math.random() < 0.15;
-                const reward = isCritical ? crop.reward * 3 : crop.reward;
+                const goldenIdx = this.fieldEvents.findIndex(e => e.fieldId === field.id && e.type === 'golden');
+                const isGolden = goldenIdx !== -1;
+                if (isGolden) this.fieldEvents.splice(goldenIdx, 1);
+                const reward = crop.reward * (isCritical ? 3 : 1) * (isGolden ? 3 : 1);
                 if (isCritical) critical = true;
 
                 this.money += reward;
@@ -568,7 +609,7 @@ export const useGameStore = defineStore("game", {
             }
 
             const actualCost = upgrade.type === 'auto'
-                ? Math.round(upgrade.cost * Math.pow(1.15, upgrade.quantity ?? 0))
+                ? Math.round(upgrade.cost * Math.pow(1.2, upgrade.quantity ?? 0))
                 : upgrade.cost;
 
             if (this.money < actualCost) {
@@ -625,7 +666,7 @@ export const useGameStore = defineStore("game", {
             // Apply boost if it's a boost upgrade
             if (upgrade.type === 'boost') {
                 if (upgrade.id.startsWith('time_boost_')) {
-                    this.timePerClickMinutes += 5;
+                    this.timePerClickMinutes *= 2;
                 }
             }
 
@@ -728,7 +769,7 @@ export const useGameStore = defineStore("game", {
         autoClickerCurrentCost: (state) => (upgradeId: string) => {
             const u = state.upgrades.find(u => u.id === upgradeId);
             if (!u || u.type !== 'auto') return 0;
-            return Math.round(u.cost * Math.pow(1.15, u.quantity ?? 0));
+            return Math.round(u.cost * Math.pow(1.2, u.quantity ?? 0));
         },
         unlockedCrops(state) {
             return state.cropShopItems.filter((item) => item.unlocked);

@@ -64,6 +64,7 @@ const SECTION_TITLES: Record<string, string> = {
   upgrades:     'Upgrades',
   market:       'Market',
   achievements: 'Achievements',
+  tutorial:     'Tutorial',
 };
 
 const expandedSections = ref<Record<string, boolean>>({
@@ -234,6 +235,71 @@ const autoUpgrades    = computed(() => props.upgrades.filter(u => u.type === 'au
               </div>
             </div>
           </div>
+        </div>
+      </template>
+
+      <!-- ── TUTORIAL ── -->
+      <template v-else-if="activeSection === 'tutorial'">
+        <div class="tutorialSection">
+          <h4 class="tutorialHeading">Getting Started</h4>
+          <p>Open the <strong>Shop</strong> on the right, select a crop, then click any empty field to plant it. Click anywhere on the farm area to skip time — crops grow and harvest automatically when ready.</p>
+        </div>
+
+        <div class="tutorialSection">
+          <h4 class="tutorialHeading">Shop</h4>
+          <p>Shows all crops you currently own seeds for. Select one to make it your active crop, then click a field to plant it. Planting costs the seed price each time.</p>
+        </div>
+
+        <div class="tutorialSection">
+          <h4 class="tutorialHeading">Crops</h4>
+          <p>Unlock new crop types here with a one-time gold cost. Better crops take longer to grow but give much higher rewards. Once unlocked, seeds appear in the Shop.</p>
+          <ul>
+            <li>Potato — 12h, 40g</li>
+            <li>Wheat — 18h, 105g</li>
+            <li>Corn — 32h, 350g</li>
+            <li>Tulip — 54h, 700g</li>
+            <li>Pumpkin — 72h, 1600g</li>
+            <li>Apple — 128h, 3500g</li>
+          </ul>
+        </div>
+
+        <div class="tutorialSection">
+          <h4 class="tutorialHeading">Upgrades</h4>
+          <p>One-time permanent upgrades split into three groups:</p>
+          <ul>
+            <li><strong>Fields</strong> — unlock additional farm plots (up to 9). Costs rise steeply: 150 → 500 → 1,500 → 5,000 → …</li>
+            <li><strong>Boosts</strong> — each Time Boost doubles minutes skipped per click (5→10→20→40→80 min). Costs: 200 → 800 → 3,000 → 12,000g.</li>
+            <li><strong>Income</strong> — add passive gold per second, earned even while idle.</li>
+          </ul>
+        </div>
+
+        <div class="tutorialSection">
+          <h4 class="tutorialHeading">Market</h4>
+          <p>Hire auto-workers that plant and harvest fields for you automatically. Each type can be purchased up to 10 times. More workers = faster automation.</p>
+          <ul>
+            <li><strong>Farmer</strong> — harvests ready fields.</li>
+            <li><strong>Tractor</strong> — harvests faster.</li>
+            <li><strong>Auto-Harvester</strong> — the most efficient worker.</li>
+          </ul>
+        </div>
+
+        <div class="tutorialSection">
+          <h4 class="tutorialHeading">Field Events</h4>
+          <p>Every 30–60 seconds a random planted field gets an event. Click the field to resolve it!</p>
+          <ul>
+            <li><strong>✨ Golden</strong> — field glows gold. Harvest while golden for <strong>3× reward</strong>. Lasts 90 seconds.</li>
+            <li><strong>💀 Withered</strong> — field turns red. Click it within <strong>45 seconds</strong> to save the crop, or it dies with no reward.</li>
+          </ul>
+        </div>
+
+        <div class="tutorialSection">
+          <h4 class="tutorialHeading">Critical Harvest</h4>
+          <p>Every harvest has a <strong>15% chance</strong> to be a Critical — awarding <strong>3× gold</strong>. Can combine with a Golden field event for 9× total!</p>
+        </div>
+
+        <div class="tutorialSection">
+          <h4 class="tutorialHeading">Achievements</h4>
+          <p>Earn stars by hitting milestones across farming, gold, upgrades, time skipped, and crop collection. Achievements are purely cosmetic — bragging rights only.</p>
         </div>
       </template>
 
@@ -503,6 +569,45 @@ const autoUpgrades    = computed(() => props.upgrades.filter(u => u.type === 'au
 .achievementDesc {
   font-size: 0.65rem;
   opacity: 0.75;
+}
+
+/* ── Tutorial ── */
+.tutorialSection {
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.tutorialSection:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.tutorialHeading {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tutorialSection p,
+.tutorialSection li {
+  font-size: 0.6rem;
+  line-height: 1.8;
+  margin: 0;
+  opacity: 0.9;
+}
+
+.tutorialSection ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
 }
 
 @media (max-width: 600px) {

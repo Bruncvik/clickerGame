@@ -28,6 +28,7 @@ import AppleCrop3 from "./assets/AppleCrop3.webp";
 import CropField from "./components/CropField.vue";
 import StatBar from "./components/StatBar.vue";
 import SidePanel from "./components/SidePanel.vue";
+import WelcomePopup from "./components/WelcomePopup.vue";
 import { ACHIEVEMENT_DEFS } from "./stores/gameStore";
 import Farmer_icon from "./assets/Farmer_icon.webp";
 import Tractor_icon from "./assets/Tractor_icon.webp";
@@ -47,11 +48,19 @@ function onResetClick() {
 function addTestGold() {
   gameStore.money += 100;
 }
+const showWelcome = ref(localStorage.getItem('farm_clicker_welcomed') !== 'true');
+
+function dismissWelcome() {
+  showWelcome.value = false;
+  localStorage.setItem('farm_clicker_welcomed', 'true');
+}
+
 const activePanelSection = ref<string | null>(null);
 const goldPulse = ref(false);
 const showOfflineIncomePopup = ref(false);
 const achievementToast = ref<{ name: string; description: string } | null>(null);
 const criticalHarvest = ref(false);
+let lastEventSpawnAt = 0;
 let timerId: number | null = null;
 let goldPulseTimeoutId: number | null = null;
 let offlineIncomePopupTimeoutId: number | null = null;
@@ -94,6 +103,10 @@ const autoIconById: Record<string, string> = {
   auto_tractor: Tractor_icon,
   auto_harvester: AutoHarvester_icon,
 };
+
+const fieldEventMap = computed(() =>
+  Object.fromEntries(gameStore.fieldEvents.map(e => [e.fieldId, e.type]))
+);
 
 const popupCrops = computed(() => {
   return gameStore.unlockedCrops.map((crop) => ({
@@ -165,6 +178,8 @@ function selectCrop(cropId: string) {
 }
 
 function selectField(fieldId: number) {
+  const resolved = gameStore.resolveFieldEvent(fieldId);
+  if (resolved) return;
   gameStore.plantSelectedCrop(fieldId);
   activePanelSection.value = null;
 }
@@ -214,7 +229,14 @@ onMounted(() => {
 
   timerId = window.setInterval(() => {
     gameStore.updateNow();
-    
+    gameStore.tickFieldEvents();
+
+    const now = Date.now();
+    if (now - lastEventSpawnAt > 30_000 + Math.random() * 30_000) {
+      gameStore.spawnFieldEvent();
+      lastEventSpawnAt = now;
+    }
+
     // Apply passive income
     gameStore.money += gameStore.passiveIncomePerSecond;
     
@@ -328,8 +350,9 @@ onBeforeUnmount(() => {
           @click="openPanel('achievements')"
         />
         <MenuButton
-          :title="'Settings'"
+          :title="'Tutorial'"
           :icon="SettingsIcon"
+          @click="openPanel('tutorial')"
         />
       </section>
       <section class="fields" @click="skipTime">
@@ -339,6 +362,7 @@ onBeforeUnmount(() => {
           :unlocked="field.unlocked"
           :crop-image="getFieldCropImage(field.cropId, gameStore.fieldProgress(field.id))"
           :progress="gameStore.fieldProgress(field.id)"
+          :event="fieldEventMap[field.id] ?? null"
           @select-field="selectField(field.id)"
         />
         <!-- Auto-clicker visuals -->
@@ -373,6 +397,7 @@ onBeforeUnmount(() => {
         @buy-upgrade="buyUpgrade"
       />
     </main>
+    <WelcomePopup v-if="showWelcome" @close="dismissWelcome" />
     <Transition name="critical-toast">
       <div v-if="criticalHarvest" class="criticalToast">
         <span class="criticalLabel">Critical Harvest!</span>
