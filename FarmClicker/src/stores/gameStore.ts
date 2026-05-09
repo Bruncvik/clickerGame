@@ -36,6 +36,37 @@ type AutoClickerInstance = {
     y: number;
 }
 
+export type AchievementCategory = 'farming' | 'gold' | 'upgrade' | 'time' | 'crops';
+
+export type AchievementDef = {
+    id: string;
+    name: string;
+    description: string;
+    category: AchievementCategory;
+};
+
+export const ACHIEVEMENT_DEFS: AchievementDef[] = [
+    { id: 'harvest_1',         name: 'First Harvest',       description: 'Complete your first harvest',         category: 'farming' },
+    { id: 'harvest_10',        name: 'Seasoned Farmer',      description: 'Complete 10 harvests',                category: 'farming' },
+    { id: 'harvest_50',        name: 'Harvest Master',       description: 'Complete 50 harvests',                category: 'farming' },
+    { id: 'harvest_100',       name: 'Legendary Harvester',  description: 'Complete 100 harvests',               category: 'farming' },
+    { id: 'gold_100',          name: 'Pocket Change',        description: 'Earn 100 gold from harvests',         category: 'gold' },
+    { id: 'gold_1000',         name: 'Saver',                description: 'Earn 1,000 gold from harvests',       category: 'gold' },
+    { id: 'gold_10000',        name: 'Wealthy Farmer',       description: 'Earn 10,000 gold from harvests',      category: 'gold' },
+    { id: 'gold_50000',        name: 'Gold Baron',           description: 'Earn 50,000 gold from harvests',      category: 'gold' },
+    { id: 'upgrade_first',     name: 'First Upgrade',        description: 'Purchase your first upgrade',         category: 'upgrade' },
+    { id: 'upgrade_all_fields',name: 'Land Baron',           description: 'Unlock all 9 fields',                 category: 'upgrade' },
+    { id: 'upgrade_auto_first',name: 'Hired Help',           description: 'Buy your first auto-clicker',        category: 'upgrade' },
+    { id: 'upgrade_auto_max',  name: 'Full Workforce',       description: 'Max out any auto-clicker to 10',     category: 'upgrade' },
+    { id: 'time_1h',           name: 'Time Skip',            description: 'Skip 1 total hour',                  category: 'time' },
+    { id: 'time_24h',          name: 'Time Traveler',        description: 'Skip 24 total hours',                category: 'time' },
+    { id: 'time_100h',         name: 'Chronomancer',         description: 'Skip 100 total hours',               category: 'time' },
+    { id: 'time_500h',         name: 'Master of Time',       description: 'Skip 500 total hours',               category: 'time' },
+    { id: 'crop_wheat',        name: 'Wheat Farmer',         description: 'Unlock wheat seeds',                 category: 'crops' },
+    { id: 'crop_corn',         name: 'Corn Farmer',          description: 'Unlock corn seeds',                  category: 'crops' },
+    { id: 'crop_all',          name: 'Full Harvest',         description: 'Unlock all crop types',              category: 'crops' },
+];
+
 const calculateFieldProgress = (
     field: Field,
     crop: CropType,
@@ -63,6 +94,10 @@ const createDefaultState = () => ({
     now: Date.now(),
     totalSkippedMs: 0,
     selectedCropId: null as string | null,
+    totalGoldEarned: 0,
+    totalHarvests: 0,
+    earnedAchievementIds: [] as string[],
+    pendingAchievements: [] as string[],
     cropShopItems: [
         {
             id: "potato_seed",
@@ -79,6 +114,14 @@ const createDefaultState = () => ({
             unlocked: false,
             growDurationMs: 36 * 60 * 60 * 1000,
             reward: 105,
+        },
+        {
+            id: "corn_seed",
+            name: "Corn",
+            cost: 100,
+            unlocked: false,
+            growDurationMs: 64 * 60 * 60 * 1000,
+            reward: 350,
         }
     ] as CropType[],
     fields: Array.from({ length: 9 }, (_, index) => ({
@@ -283,6 +326,10 @@ const loadInitialState = () => {
             })),
             lastSavedAt: Date.now(),
             now: Date.now(),
+            totalGoldEarned: parsedState.totalGoldEarned ?? defaults.totalGoldEarned,
+            totalHarvests: parsedState.totalHarvests ?? defaults.totalHarvests,
+            earnedAchievementIds: Array.isArray(parsedState.earnedAchievementIds) ? parsedState.earnedAchievementIds : [],
+            pendingAchievements: [],
             autoClickerInstances: parsedState.autoClickerInstances ?? [],
         };
     } catch {
@@ -308,6 +355,9 @@ export const useGameStore = defineStore("game", {
                 lastSavedAt: Date.now(),
                 totalSkippedMs: this.totalSkippedMs,
                 selectedCropId: this.selectedCropId,
+                totalGoldEarned: this.totalGoldEarned,
+                totalHarvests: this.totalHarvests,
+                earnedAchievementIds: this.earnedAchievementIds,
                 cropShopItems: this.cropShopItems,
                 upgrades: this.upgrades,
                 fields: this.fields,
@@ -414,6 +464,8 @@ export const useGameStore = defineStore("game", {
 
                 this.money += crop.reward;
                 gainedGold += crop.reward;
+                this.totalGoldEarned += crop.reward;
+                this.totalHarvests += 1;
                 field.cropId = null;
                 field.plantedAt = null;
                 field.plantedSkippedMs = null;
@@ -496,7 +548,7 @@ export const useGameStore = defineStore("game", {
                 // Add visual instance at random position
                 const randomX = 25 + Math.random() * 50; // 25% to 75% horizontally
                 const randomY = 25 + Math.random() * 50; // 25% to 75% vertically
-                const instanceId = `${upgradeId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                const instanceId = `${upgradeId}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
                 this.autoClickerInstances.push({
                     instanceId,
                     type: upgradeId,
@@ -582,6 +634,44 @@ export const useGameStore = defineStore("game", {
                 clearInterval(__autoClickerIntervalId);
                 __autoClickerIntervalId = null;
             }
+        },
+        checkAchievements() {
+            const earned = this.earnedAchievementIds;
+            const check = (id: string, condition: boolean) => {
+                if (condition && !earned.includes(id)) {
+                    earned.push(id);
+                    this.pendingAchievements.push(id);
+                }
+            };
+
+            check('harvest_1',   this.totalHarvests >= 1);
+            check('harvest_10',  this.totalHarvests >= 10);
+            check('harvest_50',  this.totalHarvests >= 50);
+            check('harvest_100', this.totalHarvests >= 100);
+
+            check('gold_100',   this.totalGoldEarned >= 100);
+            check('gold_1000',  this.totalGoldEarned >= 1000);
+            check('gold_10000', this.totalGoldEarned >= 10000);
+            check('gold_50000', this.totalGoldEarned >= 50000);
+
+            const nonAuto = this.upgrades.filter(u => u.type !== 'auto');
+            const auto    = this.upgrades.filter(u => u.type === 'auto');
+            check('upgrade_first',      nonAuto.some(u => u.purchased));
+            check('upgrade_all_fields', this.fields.every(f => f.unlocked));
+            check('upgrade_auto_first', auto.some(u => (u.quantity ?? 0) >= 1));
+            check('upgrade_auto_max',   auto.some(u => (u.quantity ?? 0) >= 10));
+
+            const totalHours = this.totalSkippedMs / (60 * 60 * 1000);
+            check('time_1h',   totalHours >= 1);
+            check('time_24h',  totalHours >= 24);
+            check('time_100h', totalHours >= 100);
+            check('time_500h', totalHours >= 500);
+
+            const wheat = this.cropShopItems.find(c => c.id === 'wheat_seed');
+            const corn  = this.cropShopItems.find(c => c.id === 'corn_seed');
+            check('crop_wheat', wheat?.unlocked ?? false);
+            check('crop_corn',  corn?.unlocked  ?? false);
+            check('crop_all',   this.cropShopItems.every(c => c.unlocked));
         },
     },
     getters: {
