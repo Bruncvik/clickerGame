@@ -6,6 +6,7 @@ type CropType = {
     id: string;
     name: string;
     cost: number;
+    unlockCost?: number;
     unlocked: boolean;
     growDurationMs: number;
     reward: number;
@@ -58,12 +59,15 @@ export const ACHIEVEMENT_DEFS: AchievementDef[] = [
     { id: 'upgrade_all_fields',name: 'Land Baron',           description: 'Unlock all 9 fields',                 category: 'upgrade' },
     { id: 'upgrade_auto_first',name: 'Hired Help',           description: 'Buy your first auto-clicker',        category: 'upgrade' },
     { id: 'upgrade_auto_max',  name: 'Full Workforce',       description: 'Max out any auto-clicker to 10',     category: 'upgrade' },
-    { id: 'time_1h',           name: 'Time Skip',            description: 'Skip 1 total hour',                  category: 'time' },
-    { id: 'time_24h',          name: 'Time Traveler',        description: 'Skip 24 total hours',                category: 'time' },
-    { id: 'time_100h',         name: 'Chronomancer',         description: 'Skip 100 total hours',               category: 'time' },
-    { id: 'time_500h',         name: 'Master of Time',       description: 'Skip 500 total hours',               category: 'time' },
+    { id: 'time_1h',           name: 'Time Skip',            description: 'Skip 100 total hours',               category: 'time' },
+    { id: 'time_24h',          name: 'Time Traveler',        description: 'Skip 500 total hours',               category: 'time' },
+    { id: 'time_100h',         name: 'Chronomancer',         description: 'Skip 2,500 total hours',             category: 'time' },
+    { id: 'time_500h',         name: 'Master of Time',       description: 'Skip 10,000 total hours',            category: 'time' },
     { id: 'crop_wheat',        name: 'Wheat Farmer',         description: 'Unlock wheat seeds',                 category: 'crops' },
     { id: 'crop_corn',         name: 'Corn Farmer',          description: 'Unlock corn seeds',                  category: 'crops' },
+    { id: 'crop_tulip',        name: 'Tulip Grower',         description: 'Unlock tulip seeds',                 category: 'crops' },
+    { id: 'crop_pumpkin',      name: 'Pumpkin Farmer',       description: 'Unlock pumpkin seeds',               category: 'crops' },
+    { id: 'crop_apple',        name: 'Apple Grower',         description: 'Unlock apple seeds',                 category: 'crops' },
     { id: 'crop_all',          name: 'Full Harvest',         description: 'Unlock all crop types',              category: 'crops' },
 ];
 
@@ -104,25 +108,54 @@ const createDefaultState = () => ({
             name: "Potato",
             cost: 25,
             unlocked: true,
-            growDurationMs: 24 * 60 * 60 * 1000,
+            growDurationMs: 12 * 60 * 60 * 1000,
             reward: 40,
         },
         {
             id: "wheat_seed",
             name: "Wheat",
             cost: 50,
+            unlockCost: 200,
             unlocked: false,
-            growDurationMs: 36 * 60 * 60 * 1000,
+            growDurationMs: 18 * 60 * 60 * 1000,
             reward: 105,
         },
         {
             id: "corn_seed",
             name: "Corn",
             cost: 100,
+            unlockCost: 800,
             unlocked: false,
-            growDurationMs: 64 * 60 * 60 * 1000,
+            growDurationMs: 32 * 60 * 60 * 1000,
             reward: 350,
-        }
+        },
+        {
+            id: "tulip_seed",
+            name: "Tulip",
+            cost: 150,
+            unlockCost: 2000,
+            unlocked: false,
+            growDurationMs: 54 * 60 * 60 * 1000,
+            reward: 700,
+        },
+        {
+            id: "pumpkin_seed",
+            name: "Pumpkin",
+            cost: 300,
+            unlockCost: 6000,
+            unlocked: false,
+            growDurationMs: 72 * 60 * 60 * 1000,
+            reward: 1600,
+        },
+        {
+            id: "apple_seed",
+            name: "Apple",
+            cost: 600,
+            unlockCost: 18000,
+            unlocked: false,
+            growDurationMs: 128 * 60 * 60 * 1000,
+            reward: 3500,
+        },
     ] as CropType[],
     fields: Array.from({ length: 9 }, (_, index) => ({
         id: index,
@@ -136,7 +169,7 @@ const createDefaultState = () => ({
             id: "field_2",
             name: "Field 2",
             description: "Unlock field 2",
-            cost: 75,
+            cost: 150,
             purchased: false,
             type: "field",
         },
@@ -144,7 +177,7 @@ const createDefaultState = () => ({
             id: "field_3",
             name: "Field 3",
             description: "Unlock field 3",
-            cost: 125,
+            cost: 300,
             purchased: false,
             type: "field",
         },
@@ -152,7 +185,7 @@ const createDefaultState = () => ({
             id: "field_4",
             name: "Field 4",
             description: "Unlock field 4",
-            cost: 175,
+            cost: 600,
             purchased: false,
             type: "field",
         },
@@ -160,7 +193,7 @@ const createDefaultState = () => ({
             id: "field_5",
             name: "Field 5",
             description: "Unlock field 5",
-            cost: 250,
+            cost: 1200,
             purchased: false,
             type: "field",
         },
@@ -168,7 +201,7 @@ const createDefaultState = () => ({
             id: "field_6",
             name: "Field 6",
             description: "Unlock field 6",
-            cost: 350,
+            cost: 2500,
             purchased: false,
             type: "field",
         },
@@ -176,7 +209,7 @@ const createDefaultState = () => ({
             id: "field_7",
             name: "Field 7",
             description: "Unlock field 7",
-            cost: 475,
+            cost: 5000,
             purchased: false,
             type: "field",
         },
@@ -184,7 +217,7 @@ const createDefaultState = () => ({
             id: "field_8",
             name: "Field 8",
             description: "Unlock field 8",
-            cost: 625,
+            cost: 10000,
             purchased: false,
             type: "field",
         },
@@ -192,7 +225,7 @@ const createDefaultState = () => ({
             id: "field_9",
             name: "Field 9",
             description: "Unlock field 9",
-            cost: 800,
+            cost: 20000,
             purchased: false,
             type: "field",
         },
@@ -232,7 +265,7 @@ const createDefaultState = () => ({
             id: "income_boost_1",
             name: "Income Boost I",
             description: "+0.0025 gold/sec",
-            cost: 10,
+            cost: 75,
             purchased: false,
             type: "income",
         },
@@ -441,9 +474,10 @@ export const useGameStore = defineStore("game", {
             this.now = Date.now();
             this.persistProgress();
         },
-        completeReadyFields() {
+        completeReadyFields(): { gainedGold: number; critical: boolean } {
             let didCompleteAnyField = false;
             let gainedGold = 0;
+            let critical = false;
 
             this.fields.forEach((field) => {
                 if (!field.cropId) {
@@ -462,9 +496,13 @@ export const useGameStore = defineStore("game", {
                     return;
                 }
 
-                this.money += crop.reward;
-                gainedGold += crop.reward;
-                this.totalGoldEarned += crop.reward;
+                const isCritical = Math.random() < 0.15;
+                const reward = isCritical ? crop.reward * 3 : crop.reward;
+                if (isCritical) critical = true;
+
+                this.money += reward;
+                gainedGold += reward;
+                this.totalGoldEarned += reward;
                 this.totalHarvests += 1;
                 field.cropId = null;
                 field.plantedAt = null;
@@ -477,7 +515,7 @@ export const useGameStore = defineStore("game", {
                 this.persistProgress();
             }
 
-            return gainedGold;
+            return { gainedGold, critical };
         },
         completeField(fieldId: number) {
             const field = this.fields.find((item) => item.id === fieldId);
@@ -512,11 +550,13 @@ export const useGameStore = defineStore("game", {
                 return;
             }
 
-            if (this.money < crop.cost) {
+            const price = crop.unlockCost ?? crop.cost;
+
+            if (this.money < price) {
                 return;
             }
 
-            this.money -= crop.cost;
+            this.money -= price;
             crop.unlocked = true;
             this.persistProgress();
         },
@@ -527,12 +567,16 @@ export const useGameStore = defineStore("game", {
                 return;
             }
 
-            if (this.money < upgrade.cost) {
+            const actualCost = upgrade.type === 'auto'
+                ? Math.round(upgrade.cost * Math.pow(1.15, upgrade.quantity ?? 0))
+                : upgrade.cost;
+
+            if (this.money < actualCost) {
                 return;
             }
 
             // Safety feature: ensure player keeps at least 25 gold (potato seed cost)
-            if (this.money - upgrade.cost < 25) {
+            if (this.money - actualCost < 25) {
                 return;
             }
 
@@ -542,7 +586,7 @@ export const useGameStore = defineStore("game", {
                 if (currentQty >= 10) {
                     return; // Max 10 of each type
                 }
-                this.money -= upgrade.cost;
+                this.money -= actualCost;
                 upgrade.quantity = currentQty + 1;
                 
                 // Add visual instance at random position
@@ -566,7 +610,7 @@ export const useGameStore = defineStore("game", {
                 return;
             }
 
-            this.money -= upgrade.cost;
+            this.money -= actualCost;
             upgrade.purchased = true;
 
             // Unlock field if it's a field upgrade
@@ -662,19 +706,30 @@ export const useGameStore = defineStore("game", {
             check('upgrade_auto_max',   auto.some(u => (u.quantity ?? 0) >= 10));
 
             const totalHours = this.totalSkippedMs / (60 * 60 * 1000);
-            check('time_1h',   totalHours >= 1);
-            check('time_24h',  totalHours >= 24);
-            check('time_100h', totalHours >= 100);
-            check('time_500h', totalHours >= 500);
+            check('time_1h',   totalHours >= 100);
+            check('time_24h',  totalHours >= 500);
+            check('time_100h', totalHours >= 2500);
+            check('time_500h', totalHours >= 10000);
 
-            const wheat = this.cropShopItems.find(c => c.id === 'wheat_seed');
-            const corn  = this.cropShopItems.find(c => c.id === 'corn_seed');
-            check('crop_wheat', wheat?.unlocked ?? false);
-            check('crop_corn',  corn?.unlocked  ?? false);
-            check('crop_all',   this.cropShopItems.every(c => c.unlocked));
+            const wheat   = this.cropShopItems.find(c => c.id === 'wheat_seed');
+            const corn    = this.cropShopItems.find(c => c.id === 'corn_seed');
+            const tulip   = this.cropShopItems.find(c => c.id === 'tulip_seed');
+            const pumpkin = this.cropShopItems.find(c => c.id === 'pumpkin_seed');
+            const apple   = this.cropShopItems.find(c => c.id === 'apple_seed');
+            check('crop_wheat',   wheat?.unlocked   ?? false);
+            check('crop_corn',    corn?.unlocked    ?? false);
+            check('crop_tulip',   tulip?.unlocked   ?? false);
+            check('crop_pumpkin', pumpkin?.unlocked ?? false);
+            check('crop_apple',   apple?.unlocked   ?? false);
+            check('crop_all',     this.cropShopItems.every(c => c.unlocked));
         },
     },
     getters: {
+        autoClickerCurrentCost: (state) => (upgradeId: string) => {
+            const u = state.upgrades.find(u => u.id === upgradeId);
+            if (!u || u.type !== 'auto') return 0;
+            return Math.round(u.cost * Math.pow(1.15, u.quantity ?? 0));
+        },
         unlockedCrops(state) {
             return state.cropShopItems.filter((item) => item.unlocked);
         },

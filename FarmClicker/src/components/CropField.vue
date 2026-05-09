@@ -42,11 +42,11 @@ function handleClick(event: Event) {
     background-position: center;
     position: relative;
     cursor: pointer;
-    background-image: url(../assets/Field_bg.png);
+    background-image: url(../assets/Field_bg.webp);
 }
 
 .locked {
-  background-image: url(../assets/LockedField_bg.png);
+  background-image: url(../assets/LockedField_bg.webp);
   cursor: not-allowed;
 }
 

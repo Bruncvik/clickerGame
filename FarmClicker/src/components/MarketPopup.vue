@@ -51,10 +51,10 @@ const emit = defineEmits<{
 .marketPopup {
   position: absolute;
   right: 100%;
-  top: -150%;
+  bottom: 0;
   margin-right: 0.75rem;
   width: 300px;
-  max-height: 400px;
+  max-height: min(400px, calc(100vh - 8rem));
   padding: 0.75rem;
   border: 4px solid var(--border-color);
   background-color: var(--button-color);

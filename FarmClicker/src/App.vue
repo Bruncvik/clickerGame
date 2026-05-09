@@ -1,35 +1,42 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import MenuButton from "./components/MenuButton.vue";
-import ShopIcon from "./assets/Shop_icon.png";
-import CropsIcon from "./assets/Crops_icon.png";
-import UpgradesIcon from "./assets/Upgrades_icon.png";
-import MarketIcon from "./assets/Market_icon.png";
-import SettingsIcon from "./assets/Settings_icon.png";
-import AchievementsIcon from "./assets/Achievements_icon.png";
-import PotatoCrop1 from "./assets/PotatoCrop1.png";
-import PotatoCrop2 from "./assets/PotatoCrop2.png";
-import PotatoCrop3 from "./assets/PotatoCrop3.png";
-import WheatCrop1 from "./assets/WheatCrop1.png";
-import WheatCrop2 from "./assets/WheatCrop2.png";
-import WheatCrop3 from "./assets/WheatCrop3.png";
-import CornCrop1 from "./assets/CornCrop1.png";
-import CornCrop2 from "./assets/CornCrop2.png";
-import CornCrop3 from "./assets/CornCrop3.png";
+import ShopIcon from "./assets/Shop_icon.webp";
+import CropsIcon from "./assets/Crops_icon.webp";
+import UpgradesIcon from "./assets/Upgrades_icon.webp";
+import MarketIcon from "./assets/Market_icon.webp";
+import SettingsIcon from "./assets/Settings_icon.webp";
+import AchievementsIcon from "./assets/Achievements_icon.webp";
+import PotatoCrop1 from "./assets/PotatoCrop1.webp";
+import PotatoCrop2 from "./assets/PotatoCrop2.webp";
+import PotatoCrop3 from "./assets/PotatoCrop3.webp";
+import WheatCrop1 from "./assets/WheatCrop1.webp";
+import WheatCrop2 from "./assets/WheatCrop2.webp";
+import WheatCrop3 from "./assets/WheatCrop3.webp";
+import CornCrop1 from "./assets/CornCrop1.webp";
+import CornCrop2 from "./assets/CornCrop2.webp";
+import CornCrop3 from "./assets/CornCrop3.webp";
+import TulipCrop1 from "./assets/TulipCrop1.webp";
+import TulipCrop2 from "./assets/TulipCrop2.webp";
+import TulipCrop3 from "./assets/TulipCrop3.webp";
+import PumpkinCrop1 from "./assets/PumpkinCrop1.webp";
+import PumpkinCrop2 from "./assets/PumpkinCrop2.webp";
+import PumpkinCrop3 from "./assets/PumpkinCrop3.webp";
+import AppleCrop1 from "./assets/AppleCrop1.webp";
+import AppleCrop2 from "./assets/AppleCrop2.webp";
+import AppleCrop3 from "./assets/AppleCrop3.webp";
 import CropField from "./components/CropField.vue";
 import StatBar from "./components/StatBar.vue";
-import CropShopPopup from "./components/CropShopPopup.vue";
-import CropPopup from "./components/CropPopup.vue";
-import UpgradesPopup from "./components/UpgradesPopup.vue";
-import MarketPopup from "./components/MarketPopup.vue";
-import AchievementsPopup from "./components/AchievementsPopup.vue";
+import SidePanel from "./components/SidePanel.vue";
 import { ACHIEVEMENT_DEFS } from "./stores/gameStore";
-import Farmer_icon from "./assets/Farmer_icon.png";
-import Tractor_icon from "./assets/Tractor_icon.png";
-import AutoHarvester_icon from "./assets/AutoHarvester_icon.png";
+import Farmer_icon from "./assets/Farmer_icon.webp";
+import Tractor_icon from "./assets/Tractor_icon.webp";
+import AutoHarvester_icon from "./assets/AutoHarvester_icon.webp";
 import { useGameStore } from "./stores/gameStore";
+import { useParticles } from "./composables/useParticles";
 
 const gameStore = useGameStore();
+const { burst } = useParticles();
 
 function onResetClick() {
   const confirmed = window.confirm("Are you sure you want to reset your progress? This cannot be undone.");
@@ -40,18 +47,16 @@ function onResetClick() {
 function addTestGold() {
   gameStore.money += 100;
 }
-const isShopOpen = ref(false);
-const isCropsOpen = ref(false);
-const isUpgradesOpen = ref(false);
-const isMarketOpen = ref(false);
-const isAchievementsOpen = ref(false);
+const activePanelSection = ref<string | null>(null);
 const goldPulse = ref(false);
 const showOfflineIncomePopup = ref(false);
 const achievementToast = ref<{ name: string; description: string } | null>(null);
+const criticalHarvest = ref(false);
 let timerId: number | null = null;
 let goldPulseTimeoutId: number | null = null;
 let offlineIncomePopupTimeoutId: number | null = null;
 let achievementToastTimeoutId: number | null = null;
+let criticalHarvestTimeoutId: number | null = null;
 let saveOnExit: (() => void) | null = null;
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -76,9 +81,12 @@ const achievementGroups = computed(() =>
 );
 
 const cropImageById: Record<string, string[]> = {
-  potato_seed: [PotatoCrop1, PotatoCrop2, PotatoCrop3],
-  wheat_seed: [WheatCrop1, WheatCrop2, WheatCrop3],
-  corn_seed: [CornCrop1, CornCrop2, CornCrop3],
+  potato_seed:  [PotatoCrop1,  PotatoCrop2,  PotatoCrop3],
+  wheat_seed:   [WheatCrop1,   WheatCrop2,   WheatCrop3],
+  corn_seed:    [CornCrop1,    CornCrop2,    CornCrop3],
+  tulip_seed:   [TulipCrop1,   TulipCrop2,   TulipCrop3],
+  pumpkin_seed: [PumpkinCrop1, PumpkinCrop2, PumpkinCrop3],
+  apple_seed:   [AppleCrop1,   AppleCrop2,   AppleCrop3],
 };
 
 const autoIconById: Record<string, string> = {
@@ -98,73 +106,47 @@ const popupCrops = computed(() => {
 });
 
 const unlockedCropsList = computed(() => {
-  return gameStore.cropShopItems.map((crop) => ({
-    id: crop.id,
-    name: crop.name,
-    cost: crop.cost,
-    icon: cropImageById[crop.id]?.[0] ?? '',
-    unlocked: crop.unlocked,
-    canAfford: gameStore.money >= crop.cost,
-  }));
+  return gameStore.cropShopItems.map((crop) => {
+    const unlockCost = crop.unlockCost ?? crop.cost;
+    return {
+      id: crop.id,
+      name: crop.name,
+      cost: unlockCost,
+      icon: cropImageById[crop.id]?.[0] ?? '',
+      unlocked: crop.unlocked,
+      canAfford: gameStore.money >= unlockCost,
+    };
+  });
 });
 
 const upgradesList = computed(() => {
-  return gameStore.upgrades.map((upgrade) => ({
-    id: upgrade.id,
-    name: upgrade.name,
-    description: upgrade.description,
-    cost: upgrade.cost,
-    purchased: upgrade.purchased,
-    canAfford: gameStore.money >= upgrade.cost && gameStore.money - upgrade.cost >= 25,
-    type: upgrade.type,
-    quantity: upgrade.quantity ?? 0,
-  }));
+  return gameStore.upgrades.map((upgrade) => {
+    const displayCost = upgrade.type === 'auto'
+      ? gameStore.autoClickerCurrentCost(upgrade.id)
+      : upgrade.cost;
+    return {
+      id: upgrade.id,
+      name: upgrade.name,
+      description: upgrade.description,
+      cost: displayCost,
+      purchased: upgrade.purchased,
+      canAfford: gameStore.money >= displayCost && gameStore.money - displayCost >= 25,
+      type: upgrade.type,
+      quantity: upgrade.quantity ?? 0,
+    };
+  });
 });
 
-function toggleShop() {
-  isShopOpen.value = !isShopOpen.value;
-  if (isShopOpen.value) {
-    isCropsOpen.value = false;
-    isUpgradesOpen.value = false;
-  }
-}
-
-function toggleCropsPopup() {
-  isCropsOpen.value = !isCropsOpen.value;
-  if (isCropsOpen.value) {
-    isShopOpen.value = false;
-    isUpgradesOpen.value = false;
-  }
-}
-
-function toggleUpgradesPopup() {
-  isUpgradesOpen.value = !isUpgradesOpen.value;
-  if (isUpgradesOpen.value) {
-    isShopOpen.value = false;
-    isCropsOpen.value = false;
-    isMarketOpen.value = false;
-  }
-}
-
-function toggleMarketPopup() {
-  isMarketOpen.value = !isMarketOpen.value;
-  if (isMarketOpen.value) {
-    isShopOpen.value = false;
-    isCropsOpen.value = false;
-    isUpgradesOpen.value = false;
-  }
+function openPanel(section: string) {
+  activePanelSection.value = activePanelSection.value === section ? null : section;
 }
 
 function closeAllPopups() {
-  isShopOpen.value = false;
-  isCropsOpen.value = false;
-  isUpgradesOpen.value = false;
-  isMarketOpen.value = false;
-  isAchievementsOpen.value = false;
+  activePanelSection.value = null;
 }
 
-function toggleAchievementsPopup() {
-  isAchievementsOpen.value = !isAchievementsOpen.value;
+function onDocClick(e: MouseEvent) {
+  burst(e.clientX, e.clientY);
 }
 
 function showAchievementNotification(id: string) {
@@ -184,7 +166,7 @@ function selectCrop(cropId: string) {
 
 function selectField(fieldId: number) {
   gameStore.plantSelectedCrop(fieldId);
-  isShopOpen.value = false;
+  activePanelSection.value = null;
 }
 
 function buyCrop(cropId: string) {
@@ -236,7 +218,16 @@ onMounted(() => {
     // Apply passive income
     gameStore.money += gameStore.passiveIncomePerSecond;
     
-    const gainedGold = gameStore.completeReadyFields();
+    const { gainedGold, critical } = gameStore.completeReadyFields();
+
+    if (critical) {
+      criticalHarvest.value = true;
+      if (criticalHarvestTimeoutId !== null) clearTimeout(criticalHarvestTimeoutId);
+      criticalHarvestTimeoutId = window.setTimeout(() => {
+        criticalHarvest.value = false;
+        criticalHarvestTimeoutId = null;
+      }, 1800);
+    }
 
     gameStore.checkAchievements();
     if (gameStore.pendingAchievements.length > 0) {
@@ -269,6 +260,7 @@ onMounted(() => {
   window.addEventListener('beforeunload', saveOnExit);
   document.addEventListener('visibilitychange', saveOnExit);
   document.addEventListener('click', closeAllPopups);
+  document.addEventListener('click', onDocClick);
 
   // start auto-clickers based on purchased upgrades
   gameStore.initAutoClickers();
@@ -291,6 +283,10 @@ onBeforeUnmount(() => {
     clearTimeout(achievementToastTimeoutId);
   }
 
+  if (criticalHarvestTimeoutId !== null) {
+    clearTimeout(criticalHarvestTimeoutId);
+  }
+
   gameStore.persistProgress();
 
   if (saveOnExit) {
@@ -299,6 +295,7 @@ onBeforeUnmount(() => {
   }
 
   document.removeEventListener('click', closeAllPopups);
+  document.removeEventListener('click', onDocClick);
 });
 </script>
 
@@ -318,24 +315,18 @@ onBeforeUnmount(() => {
           <button class="testButton" @click="addTestGold">+100 Gold</button>
         <div class="autoClickersWrap">
           <span v-for="u in gameStore.upgrades.filter(x => x.type === 'auto' && x.purchased)" :key="u.id" class="autoIcon">
-            {{ autoIconById[u.id] ?? '🤖' }}
+            {{ autoIconById[u.id] ?? 'đź¤–' }}
           </span>
         </div>
       </header>
     </nav>
     <main class="mainPage">
-      <section class="menuButtons">
-        <div class="achievementsAnchor" @click.stop>
-          <MenuButton
-            :title="'Achievements'"
-            :icon="AchievementsIcon"
-            @click="toggleAchievementsPopup"
-          />
-          <AchievementsPopup
-            v-if="isAchievementsOpen"
-            :groups="achievementGroups"
-          />
-        </div>
+      <section class="menuButtons" @click.stop>
+        <MenuButton
+          :title="'Achievements'"
+          :icon="AchievementsIcon"
+          @click="openPanel('achievements')"
+        />
         <MenuButton
           :title="'Settings'"
           :icon="SettingsIcon"
@@ -362,58 +353,32 @@ onBeforeUnmount(() => {
           />
         </div>
       </section>
-      <section class="menuButtons">
-        <div class="shopAnchor" @click.stop>
-          <MenuButton
-           :title="'Shop'"
-            :icon="ShopIcon"
-            @click="toggleShop"
-           />
-          <CropShopPopup
-            v-if="isShopOpen"
-            :crops="popupCrops"
-            :selected-crop-id="gameStore.selectedCropId"
-            @select-crop="selectCrop"
-          />
-        </div>
-        <div class="cropsAnchor" @click.stop>
-         <MenuButton
-         :title="'Crops'"
-          :icon="CropsIcon"
-          @click="toggleCropsPopup"
-         />
-         <CropPopup
-           v-if="isCropsOpen"
-           :crops="unlockedCropsList"
-           @buy-crop="buyCrop"
-         />
-        </div>
-        <div class="upgradesAnchor" @click.stop>
-         <MenuButton
-         :title="'Upgrades'"
-          :icon="UpgradesIcon"
-          @click="toggleUpgradesPopup"
-         />
-         <UpgradesPopup
-           v-if="isUpgradesOpen"
-           :upgrades="upgradesList.filter(u => u.type !== 'auto')"
-           @buy-upgrade="buyUpgrade"
-         />
-        </div>
-        <div class="marketAnchor" @click.stop>
-         <MenuButton
-         :title="'Market'"
-          :icon="MarketIcon"
-          @click="toggleMarketPopup"
-         />
-         <MarketPopup
-           v-if="isMarketOpen"
-           :upgrades="upgradesList.filter(u => u.type === 'auto')"
-           @buy-upgrade="buyUpgrade"
-         />
-        </div>
+      <section class="menuButtons" @click.stop>
+        <MenuButton :title="'Shop'"     :icon="ShopIcon"     :active="activePanelSection === 'shop'"     @click="openPanel('shop')" />
+        <MenuButton :title="'Crops'"    :icon="CropsIcon"    :active="activePanelSection === 'crops'"    @click="openPanel('crops')" />
+        <MenuButton :title="'Upgrades'" :icon="UpgradesIcon" :active="activePanelSection === 'upgrades'" @click="openPanel('upgrades')" />
+        <MenuButton :title="'Market'"   :icon="MarketIcon"   :active="activePanelSection === 'market'"   @click="openPanel('market')" />
       </section>
+      <SidePanel
+        v-if="activePanelSection !== null"
+        :active-section="activePanelSection"
+        :shop-crops="popupCrops"
+        :selected-crop-id="gameStore.selectedCropId"
+        :crop-unlock-items="unlockedCropsList"
+        :upgrades="upgradesList"
+        :achievement-groups="achievementGroups"
+        @close="activePanelSection = null"
+        @select-crop="selectCrop"
+        @buy-crop="buyCrop"
+        @buy-upgrade="buyUpgrade"
+      />
     </main>
+    <Transition name="critical-toast">
+      <div v-if="criticalHarvest" class="criticalToast">
+        <span class="criticalLabel">Critical Harvest!</span>
+        <span class="criticalDesc">3× gold earned</span>
+      </div>
+    </Transition>
     <Transition name="achievement-toast">
       <div v-if="achievementToast" class="achievementToast">
         <span class="toastLabel">Achievement Unlocked!</span>
@@ -583,24 +548,44 @@ header {
   margin: 2rem;
 }
 
-.shopAnchor {
-  position: relative;
+
+.criticalToast {
+  position: fixed;
+  bottom: 6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.6rem 1.1rem;
+  border: 4px solid var(--border-color);
+  background-color: #a8d45a;
+  z-index: 200;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  pointer-events: none;
+  white-space: nowrap;
 }
 
-.cropsAnchor {
-  position: relative;
+.criticalLabel {
+  font-size: 0.7rem;
+  font-weight: bold;
+  color: #2d5a00;
 }
 
-.upgradesAnchor {
-  position: relative;
+.criticalDesc {
+  font-size: 0.55rem;
+  color: #3a7000;
 }
 
-.marketAnchor {
-  position: relative;
+.critical-toast-enter-active,
+.critical-toast-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
 }
 
-.achievementsAnchor {
-  position: relative;
+.critical-toast-enter-from,
+.critical-toast-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(0.5rem);
 }
 
 .achievementToast {

@@ -1,12 +1,13 @@
 <script setup lang="ts">
 const props = defineProps({
     title: String,
-    icon: String
+    icon: String,
+    active: Boolean,
 })
 </script>
 
 <template>
-    <div class="button">
+    <div class="button" :class="{ active: props.active }">
           <p>{{ title }}</p>
           <div class="icon" :style="{ backgroundImage: `url(${icon})` }"></div>
         </div>
@@ -25,6 +26,10 @@ const props = defineProps({
 
   &:hover {
     background-color: var(--button-hover-color);
+  }
+
+  &.active {
+    background-color: var(--button-selected-color);
   }
 }
 @media (max-width: 1000px) {

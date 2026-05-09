@@ -113,10 +113,10 @@ const toggleSection = (section: string) => {
 .upgradesPopup {
   position: absolute;
   right: 100%;
-  top: 0;
+  bottom: -50%;
   margin-right: 0.75rem;
   width: 300px;
-  max-height: 600px;
+  max-height: min(600px, calc(100vh - 8rem));
   padding: 0.75rem;
   border: 4px solid var(--border-color);
   background-color: var(--button-color);
