@@ -26,6 +26,7 @@ export type UpgradeType = {
   type: 'field' | 'boost' | 'income' | 'auto';
   quantity?: number;
   incomeAmount?: number;
+  clicksPerSecond?: number;
 };
 
 export type AutoClickerInstance = {

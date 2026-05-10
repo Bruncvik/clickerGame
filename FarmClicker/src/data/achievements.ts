@@ -1,0 +1,26 @@
+import type { AchievementDef } from '../types';
+
+export const ACHIEVEMENT_DEFS: AchievementDef[] = [
+  { id: 'harvest_1',          name: 'First Harvest',       description: 'Complete your first harvest',        category: 'farming' },
+  { id: 'harvest_10',         name: 'Seasoned Farmer',     description: 'Complete 10 harvests',               category: 'farming' },
+  { id: 'harvest_50',         name: 'Harvest Master',      description: 'Complete 50 harvests',               category: 'farming' },
+  { id: 'harvest_100',        name: 'Legendary Harvester', description: 'Complete 100 harvests',              category: 'farming' },
+  { id: 'gold_100',           name: 'Pocket Change',       description: 'Earn 100 gold from harvests',        category: 'gold' },
+  { id: 'gold_1000',          name: 'Saver',               description: 'Earn 1,000 gold from harvests',      category: 'gold' },
+  { id: 'gold_10000',         name: 'Wealthy Farmer',      description: 'Earn 10,000 gold from harvests',     category: 'gold' },
+  { id: 'gold_50000',         name: 'Gold Baron',          description: 'Earn 50,000 gold from harvests',     category: 'gold' },
+  { id: 'upgrade_first',      name: 'First Upgrade',       description: 'Purchase your first upgrade',        category: 'upgrade' },
+  { id: 'upgrade_all_fields', name: 'Land Baron',          description: 'Unlock all 9 fields',                category: 'upgrade' },
+  { id: 'upgrade_auto_first', name: 'Hired Help',          description: 'Buy your first auto-clicker',        category: 'upgrade' },
+  { id: 'upgrade_auto_max',   name: 'Full Workforce',      description: 'Max out any auto-clicker to 10',     category: 'upgrade' },
+  { id: 'time_1h',            name: 'Time Skip',           description: 'Skip 100 total hours',               category: 'time' },
+  { id: 'time_24h',           name: 'Time Traveler',       description: 'Skip 500 total hours',               category: 'time' },
+  { id: 'time_100h',          name: 'Chronomancer',        description: 'Skip 2,500 total hours',             category: 'time' },
+  { id: 'time_500h',          name: 'Master of Time',      description: 'Skip 10,000 total hours',            category: 'time' },
+  { id: 'crop_wheat',         name: 'Wheat Farmer',        description: 'Unlock wheat seeds',                 category: 'crops' },
+  { id: 'crop_corn',          name: 'Corn Farmer',         description: 'Unlock corn seeds',                  category: 'crops' },
+  { id: 'crop_tulip',         name: 'Tulip Grower',        description: 'Unlock tulip seeds',                 category: 'crops' },
+  { id: 'crop_pumpkin',       name: 'Pumpkin Farmer',      description: 'Unlock pumpkin seeds',               category: 'crops' },
+  { id: 'crop_apple',         name: 'Apple Grower',        description: 'Unlock apple seeds',                 category: 'crops' },
+  { id: 'crop_all',           name: 'Full Harvest',        description: 'Unlock all crop types',              category: 'crops' },
+];

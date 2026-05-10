@@ -1,73 +1,34 @@
-﻿<script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
-import MenuButton from "./components/MenuButton.vue";
-import ShopIcon from "./assets/Shop_icon.webp";
-import CropsIcon from "./assets/Crops_icon.webp";
-import UpgradesIcon from "./assets/Upgrades_icon.webp";
-import MarketIcon from "./assets/Market_icon.webp";
-import SettingsIcon from "./assets/Settings_icon.webp";
-import AchievementsIcon from "./assets/Achievements_icon.webp";
-import RebirthIcon from "./assets/Rebirth_icon.webp";
-import PotatoCrop1 from "./assets/PotatoCrop1.webp";
-import PotatoCrop2 from "./assets/PotatoCrop2.webp";
-import PotatoCrop3 from "./assets/PotatoCrop3.webp";
-import WheatCrop1 from "./assets/WheatCrop1.webp";
-import WheatCrop2 from "./assets/WheatCrop2.webp";
-import WheatCrop3 from "./assets/WheatCrop3.webp";
-import CornCrop1 from "./assets/CornCrop1.webp";
-import CornCrop2 from "./assets/CornCrop2.webp";
-import CornCrop3 from "./assets/CornCrop3.webp";
-import TulipCrop1 from "./assets/TulipCrop1.webp";
-import TulipCrop2 from "./assets/TulipCrop2.webp";
-import TulipCrop3 from "./assets/TulipCrop3.webp";
-import PumpkinCrop1 from "./assets/PumpkinCrop1.webp";
-import PumpkinCrop2 from "./assets/PumpkinCrop2.webp";
-import PumpkinCrop3 from "./assets/PumpkinCrop3.webp";
-import AppleCrop1 from "./assets/AppleCrop1.webp";
-import AppleCrop2 from "./assets/AppleCrop2.webp";
-import AppleCrop3 from "./assets/AppleCrop3.webp";
-import CropField from "./components/CropField.vue";
-import StatBar from "./components/StatBar.vue";
-import SidePanel from "./components/SidePanel.vue";
-import WelcomePopup from "./components/WelcomePopup.vue";
-import { ACHIEVEMENT_DEFS, REBIRTH_THRESHOLD } from "./stores/gameStore";
-import Farmer_icon from "./assets/Farmer_icon.webp";
-import Tractor_icon from "./assets/Tractor_icon.webp";
-import AutoHarvester_icon from "./assets/AutoHarvester_icon.webp";
-import { useGameStore } from "./stores/gameStore";
-import { useParticles } from "./composables/useParticles";
-import { useToast } from "./composables/useToast";
+<script setup lang="ts">
+import { computed, ref } from 'vue';
+import MenuButton from './components/MenuButton.vue';
+import GameHeader from './components/GameHeader.vue';
+import CropField from './components/CropField.vue';
+import SidePanel from './components/SidePanel.vue';
+import WelcomePopup from './components/WelcomePopup.vue';
+import ShopIcon from './assets/Shop_icon.webp';
+import CropsIcon from './assets/Crops_icon.webp';
+import UpgradesIcon from './assets/Upgrades_icon.webp';
+import MarketIcon from './assets/Market_icon.webp';
+import SettingsIcon from './assets/Settings_icon.webp';
+import AchievementsIcon from './assets/Achievements_icon.webp';
+import RebirthIcon from './assets/Rebirth_icon.webp';
+import { REBIRTH_THRESHOLD, useGameStore } from './stores/gameStore';
+import { ACHIEVEMENT_DEFS } from './data/achievements';
+import { useParticles } from './composables/useParticles';
+import { useGameLoop } from './composables/useGameLoop';
+import { cropImageById, autoIconById, getFieldCropImage } from './composables/useCropImages';
 
 const gameStore = useGameStore();
 const { burst } = useParticles();
-
-function onResetClick() {
-  const confirmed = window.confirm("Are you sure you want to reset your progress? This cannot be undone.");
-  if (!confirmed) return;
-  gameStore.resetGame();
-}
+const { goldPulse, offlineIncomeVisible, achievementToastData, criticalHarvestVisible } = useGameLoop();
 
 const showWelcome = ref(localStorage.getItem('farm_clicker_welcomed') !== 'true');
-
 function dismissWelcome() {
   showWelcome.value = false;
   localStorage.setItem('farm_clicker_welcomed', 'true');
 }
 
 const activePanelSection = ref<string | null>(null);
-const goldPulse = ref(false);
-const offlineIncomePopup = useToast<number>(3000);
-const achievementToast = useToast<{ name: string; description: string }>(4000);
-const criticalHarvestToast = useToast<true>(1800);
-
-// Top-level ref aliases so Vue auto-unwraps them in the template
-const offlineIncomeVisible = offlineIncomePopup.value;
-const achievementToastData = achievementToast.value;
-const criticalHarvestVisible = criticalHarvestToast.value;
-let lastEventSpawnAt = 0;
-let timerId: number | null = null;
-let goldPulseTimeoutId: number | null = null;
-let saveOnExit: (() => void) | null = null;
 
 const CATEGORY_LABELS: Record<string, string> = {
   farming: 'Farming Milestones',
@@ -90,37 +51,22 @@ const achievementGroups = computed(() =>
   }))
 );
 
-const cropImageById: Record<string, string[]> = {
-  potato_seed:  [PotatoCrop1,  PotatoCrop2,  PotatoCrop3],
-  wheat_seed:   [WheatCrop1,   WheatCrop2,   WheatCrop3],
-  corn_seed:    [CornCrop1,    CornCrop2,    CornCrop3],
-  tulip_seed:   [TulipCrop1,   TulipCrop2,   TulipCrop3],
-  pumpkin_seed: [PumpkinCrop1, PumpkinCrop2, PumpkinCrop3],
-  apple_seed:   [AppleCrop1,   AppleCrop2,   AppleCrop3],
-};
-
-const autoIconById: Record<string, string> = {
-  auto_person: Farmer_icon,
-  auto_tractor: Tractor_icon,
-  auto_harvester: AutoHarvester_icon,
-};
-
 const fieldEventMap = computed(() =>
   Object.fromEntries(gameStore.fieldEvents.map(e => [e.fieldId, e.type]))
 );
 
-const popupCrops = computed(() => {
-  return gameStore.unlockedCrops.map((crop) => ({
+const popupCrops = computed(() =>
+  gameStore.unlockedCrops.map(crop => ({
     id: crop.id,
     name: crop.name,
     cost: crop.cost,
     icon: cropImageById[crop.id]?.[0] ?? '',
     canAfford: gameStore.money >= crop.cost,
-  }));
-});
+  }))
+);
 
-const unlockedCropsList = computed(() => {
-  return gameStore.cropShopItems.map((crop) => {
+const unlockedCropsList = computed(() =>
+  gameStore.cropShopItems.map(crop => {
     const unlockCost = crop.unlockCost ?? crop.cost;
     return {
       id: crop.id,
@@ -130,11 +76,11 @@ const unlockedCropsList = computed(() => {
       unlocked: crop.unlocked,
       canAfford: gameStore.money >= unlockCost,
     };
-  });
-});
+  })
+);
 
-const upgradesList = computed(() => {
-  return gameStore.upgrades.map((upgrade) => {
+const upgradesList = computed(() =>
+  gameStore.upgrades.map(upgrade => {
     const displayCost = upgrade.type === 'auto'
       ? gameStore.autoClickerCurrentCost(upgrade.id)
       : upgrade.cost;
@@ -148,25 +94,16 @@ const upgradesList = computed(() => {
       type: upgrade.type,
       quantity: upgrade.quantity ?? 0,
     };
-  });
-});
+  })
+);
 
 function openPanel(section: string) {
   activePanelSection.value = activePanelSection.value === section ? null : section;
 }
 
-function closeAllPopups() {
-  activePanelSection.value = null;
-}
-
-function onDocClick(e: MouseEvent) {
+function onAppClick(e: MouseEvent) {
   burst(e.clientX, e.clientY);
-}
-
-function showAchievementNotification(id: string) {
-  const def = ACHIEVEMENT_DEFS.find(a => a.id === id);
-  if (!def) return;
-  achievementToast.show(def);
+  activePanelSection.value = null;
 }
 
 function onRebirth() {
@@ -182,182 +119,26 @@ function onRebirth() {
   }
 }
 
-function selectCrop(cropId: string) {
-  gameStore.selectCropForPlanting(cropId);
-}
-
 function selectField(fieldId: number) {
   const resolved = gameStore.resolveFieldEvent(fieldId);
   if (resolved) return;
   gameStore.plantSelectedCrop(fieldId);
   activePanelSection.value = null;
 }
-
-function buyCrop(cropId: string) {
-  gameStore.buyCrop(cropId);
-}
-
-function buyUpgrade(upgradeId: string) {
-  gameStore.buyUpgrade(upgradeId);
-}
-
-function skipTime() {
-  gameStore.skipTime();
-}
-
-function getFieldCropImage(cropId: string | null, progress: number) {
-  if (!cropId) {
-    return null;
-  }
-
-  const stageImages = cropImageById[cropId];
-
-  if (!stageImages) {
-    return null;
-  }
-
-  if (progress >= 0.66) {
-    return stageImages[2] ?? stageImages[0] ?? null;
-  }
-
-  if (progress >= 0.33) {
-    return stageImages[1] ?? stageImages[0] ?? null;
-  }
-
-  return stageImages[0] ?? null;
-}
-
-onMounted(() => {
-  if (gameStore.offlineIncomeGained > 0) {
-    offlineIncomePopup.show(gameStore.offlineIncomeGained);
-  }
-
-  timerId = window.setInterval(() => {
-    gameStore.updateNow();
-    gameStore.tickFieldEvents();
-
-    const now = Date.now();
-    if (now - lastEventSpawnAt > 30_000 + Math.random() * 30_000) {
-      gameStore.spawnFieldEvent();
-      lastEventSpawnAt = now;
-    }
-
-    // Apply passive income (scaled by generation multiplier)
-    gameStore.money += gameStore.passiveIncomePerSecond * gameStore.goldMultiplier;
-    
-    const { gainedGold, critical } = gameStore.completeReadyFields();
-
-    if (critical) {
-      criticalHarvestToast.show(true);
-    }
-
-    gameStore.checkAchievements();
-    if (gameStore.pendingAchievements.length > 0) {
-      showAchievementNotification(gameStore.pendingAchievements.shift()!);
-    }
-
-    gameStore.persistProgress();
-
-    if (gainedGold > 0) {
-      goldPulse.value = false;
-
-      if (goldPulseTimeoutId !== null) {
-        clearTimeout(goldPulseTimeoutId);
-      }
-
-      requestAnimationFrame(() => {
-        goldPulse.value = true;
-      });
-
-      goldPulseTimeoutId = window.setTimeout(() => {
-        goldPulse.value = false;
-      }, 350);
-    }
-  }, 1000);
-
-  saveOnExit = () => {
-    gameStore.persistProgress();
-  };
-
-  window.addEventListener('beforeunload', saveOnExit);
-  document.addEventListener('visibilitychange', saveOnExit);
-  document.addEventListener('click', closeAllPopups);
-  document.addEventListener('click', onDocClick);
-
-  // start auto-clickers based on purchased upgrades
-  gameStore.initAutoClickers();
-});
-
-onBeforeUnmount(() => {
-  if (timerId !== null) {
-    clearInterval(timerId);
-  }
-
-  if (goldPulseTimeoutId !== null) {
-    clearTimeout(goldPulseTimeoutId);
-  }
-
-  offlineIncomePopup.clear();
-  achievementToast.clear();
-  criticalHarvestToast.clear();
-
-  gameStore.persistProgress();
-
-  if (saveOnExit) {
-    window.removeEventListener('beforeunload', saveOnExit);
-    document.removeEventListener('visibilitychange', saveOnExit);
-  }
-
-  document.removeEventListener('click', closeAllPopups);
-  document.removeEventListener('click', onDocClick);
-});
 </script>
 
 <template>
-  <article class="app">
-    <nav>
-      <h1>Farm Clicker</h1>
-      <header>
-        <div class="goldStatWrap">
-          <StatBar :value="gameStore.money" currency="Gold" :pulse="goldPulse"/>
-          <div v-if="offlineIncomeVisible" class="offlineIncomePopup">
-            +{{ Math.round(gameStore.offlineIncomeGained * 100) / 100 }} while away
-          </div>
-        </div>
-        <StatBar :value="`${gameStore.timePerClickMinutes} minutes`" currency="Time per click"/>
-        <div v-if="gameStore.generation > 0" class="genBadge">
-          Gen {{ gameStore.generation }} · ×{{ gameStore.goldMultiplier.toFixed(2) }}
-        </div>
-        <button class="resetButton" @click="onResetClick">Reset</button>
-<div class="autoClickersWrap">
-          <span v-for="u in gameStore.upgrades.filter(x => x.type === 'auto' && x.purchased)" :key="u.id" class="autoIcon">
-            {{ autoIconById[u.id] ?? 'đź¤–' }}
-          </span>
-        </div>
-      </header>
-    </nav>
+  <article class="app" @click="onAppClick">
+    <GameHeader :gold-pulse="goldPulse" :offline-income-visible="offlineIncomeVisible" />
+
     <main class="mainPage">
       <section class="menuButtons" @click.stop>
-        <MenuButton
-          :title="'Achievements'"
-          :icon="AchievementsIcon"
-          :active="activePanelSection === 'achievements'"
-          @click="openPanel('achievements')"
-        />
-        <MenuButton
-          :title="'Tutorial'"
-          :icon="SettingsIcon"
-          :active="activePanelSection === 'tutorial'"
-          @click="openPanel('tutorial')"
-        />
-        <MenuButton
-          :title="'Rebirth'"
-          :icon="RebirthIcon"
-          :active="activePanelSection === 'rebirth'"
-          @click="openPanel('rebirth')"
-        />
+        <MenuButton title="Achievements" :icon="AchievementsIcon" :active="activePanelSection === 'achievements'" @click="openPanel('achievements')" />
+        <MenuButton title="Tutorial"     :icon="SettingsIcon"     :active="activePanelSection === 'tutorial'"     @click="openPanel('tutorial')" />
+        <MenuButton title="Rebirth"      :icon="RebirthIcon"      :active="activePanelSection === 'rebirth'"      @click="openPanel('rebirth')" />
       </section>
-      <section class="fields" @click="skipTime">
+
+      <section class="fields" @click.stop="gameStore.skipTime()">
         <CropField
           v-for="field in gameStore.fields"
           :key="field.id"
@@ -367,24 +148,28 @@ onBeforeUnmount(() => {
           :event="fieldEventMap[field.id] ?? null"
           @select-field="selectField(field.id)"
         />
-        <!-- Auto-clicker visuals -->
-        <div v-for="instance in gameStore.autoClickerInstances" :key="instance.instanceId" 
-             class="autoClickerVisual" 
-             :style="{ left: instance.x + '%', top: instance.y + '%' }">
-          <img 
+        <div
+          v-for="instance in gameStore.autoClickerInstances"
+          :key="instance.instanceId"
+          class="autoClickerVisual"
+          :style="{ left: instance.x + '%', top: instance.y + '%' }"
+        >
+          <img
             v-if="autoIconById[instance.type]"
-            :src="autoIconById[instance.type]" 
-            :alt="instance.type" 
+            :src="autoIconById[instance.type]"
+            :alt="instance.type"
             class="autoVisualImg"
           />
         </div>
       </section>
+
       <section class="menuButtons" @click.stop>
-        <MenuButton :title="'Shop'"     :icon="ShopIcon"     :active="activePanelSection === 'shop'"     @click="openPanel('shop')" />
-        <MenuButton :title="'Crops'"    :icon="CropsIcon"    :active="activePanelSection === 'crops'"    @click="openPanel('crops')" />
-        <MenuButton :title="'Upgrades'" :icon="UpgradesIcon" :active="activePanelSection === 'upgrades'" @click="openPanel('upgrades')" />
-        <MenuButton :title="'Market'"   :icon="MarketIcon"   :active="activePanelSection === 'market'"   @click="openPanel('market')" />
+        <MenuButton title="Shop"     :icon="ShopIcon"     :active="activePanelSection === 'shop'"     @click="openPanel('shop')" />
+        <MenuButton title="Crops"    :icon="CropsIcon"    :active="activePanelSection === 'crops'"    @click="openPanel('crops')" />
+        <MenuButton title="Upgrades" :icon="UpgradesIcon" :active="activePanelSection === 'upgrades'" @click="openPanel('upgrades')" />
+        <MenuButton title="Market"   :icon="MarketIcon"   :active="activePanelSection === 'market'"   @click="openPanel('market')" />
       </section>
+
       <SidePanel
         v-if="activePanelSection !== null"
         :active-section="activePanelSection"
@@ -399,19 +184,22 @@ onBeforeUnmount(() => {
         :total-gold-earned="gameStore.totalGoldEarned"
         :rebirth-threshold="REBIRTH_THRESHOLD"
         @close="activePanelSection = null"
-        @select-crop="selectCrop"
-        @buy-crop="buyCrop"
-        @buy-upgrade="buyUpgrade"
+        @select-crop="gameStore.selectCropForPlanting($event)"
+        @buy-crop="gameStore.buyCrop($event)"
+        @buy-upgrade="gameStore.buyUpgrade($event)"
         @rebirth="onRebirth"
       />
     </main>
+
     <WelcomePopup v-if="showWelcome" @close="dismissWelcome" />
+
     <Transition name="critical-toast">
       <div v-if="criticalHarvestVisible" class="criticalToast">
         <span class="criticalLabel">Critical Harvest!</span>
         <span class="criticalDesc">3× gold earned</span>
       </div>
     </Transition>
+
     <Transition name="achievement-toast">
       <div v-if="achievementToastData" class="achievementToast">
         <span class="toastLabel">Achievement Unlocked!</span>
@@ -423,7 +211,6 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 .app {
   height: 100%;
   display: flex;
@@ -439,95 +226,22 @@ onBeforeUnmount(() => {
   align-items: center;
 }
 
-nav {
+.menuButtons {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 2rem;
-}
-
-header {
-  display: flex;
-  flex-direction: row;
   justify-content: space-between;
-  gap: 5rem;
+  gap: 1rem;
+  margin: 2rem;
 }
 
-.goldStatWrap {
+.fields {
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, 150px);
+  grid-template-rows: repeat(3, 150px);
+  gap: 1rem;
+  padding: 3rem;
   position: relative;
-  display: inline-flex;
-}
-
-.offlineIncomePopup {
-  position: absolute;
-  left: calc(100% + 0.5rem);
-  top: 50%;
-  transform: translateY(-50%);
-  padding: 0.45rem 0.6rem;
-  border: 4px solid var(--border-color);
-  background-color: #e8d28a;
-  font-size: 0.65rem;
-  white-space: nowrap;
-  animation: fadeAway 3s ease forwards;
-  pointer-events: none;
-}
-
-.genBadge {
-  font-size: 0.6rem;
-  padding: 0.3rem 0.6rem;
-  background: #5a1f7a;
-  color: #e8c8ff;
-  font-weight: bold;
-  border: 2px solid var(--border-color);
-  white-space: nowrap;
-}
-
-.resetButton {
-  margin-left: 1rem;
-  padding: 0.35rem 0.6rem;
-  border-radius: 6px;
-  border: 2px solid var(--border-color);
-  background: #7a2f2f;
-  color: #fff;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.resetButton:active {
-  transform: translateY(1px);
-}
-
-.autoClickersWrap {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-left: 0.75rem;
-}
-.autoIconBadge {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-}
-.autoIcon {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-  padding: 0.1rem;
-  background: rgba(255,255,255,0.06);
-  border-radius: 6px;
-  border: 2px solid var(--border-color);
-}
-.autoIconBadge .quantity {
-  position: absolute;
-  top: -6px;
-  right: -4px;
-  background: #d4af37;
-  color: #000;
-  font-size: 0.55rem;
-  font-weight: bold;
-  padding: 0.1rem 0.25rem;
-  border-radius: 3px;
-  border: 1px solid var(--border-color);
 }
 
 .autoClickerVisual {
@@ -544,53 +258,14 @@ header {
   margin: 0;
 }
 
-.autoClickerVisual img,
 .autoVisualImg {
-  display: block !important;
+  display: block;
   width: 80px;
   height: 80px;
   object-fit: contain;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
   margin: auto;
 }
-
-@keyframes popIn {
-  0% {
-    opacity: 0;
-    transform: scale(0.3);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes fadeAway {
-  0% {
-    opacity: 0;
-    transform: translateY(-50%) translateX(-6px);
-  }
-  12% {
-    opacity: 1;
-    transform: translateY(-50%) translateX(0);
-  }
-  80% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-50%) translateX(6px);
-  }
-}
-
-.menuButtons {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 1rem;
-  margin: 2rem;
-}
-
 
 .criticalToast {
   position: fixed;
@@ -618,17 +293,6 @@ header {
 .criticalDesc {
   font-size: 0.55rem;
   color: #3a7000;
-}
-
-.critical-toast-enter-active,
-.critical-toast-leave-active {
-  transition: opacity 0.25s ease, transform 0.25s ease;
-}
-
-.critical-toast-enter-from,
-.critical-toast-leave-to {
-  opacity: 0;
-  transform: translateX(-50%) translateY(0.5rem);
 }
 
 .achievementToast {
@@ -665,6 +329,17 @@ header {
   opacity: 0.75;
 }
 
+.critical-toast-enter-active,
+.critical-toast-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.critical-toast-enter-from,
+.critical-toast-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(0.5rem);
+}
+
 .achievement-toast-enter-active,
 .achievement-toast-leave-active {
   transition: opacity 0.3s ease, transform 0.3s ease;
@@ -676,26 +351,18 @@ header {
   transform: translateX(-50%) translateY(0.75rem);
 }
 
-.fields {
-  height: 100%;
-  display: grid;
-  grid-template-columns: repeat(3, 150px);
-  grid-template-rows: repeat(3, 150px);
-  gap: 1rem;
-  padding: 3rem;
-  position: relative;
+@keyframes popIn {
+  0%   { opacity: 0; transform: scale(0.3); }
+  100% { opacity: 1; transform: scale(1); }
 }
+
 @media (max-width: 1300px) {
   .fields {
     grid-template-columns: repeat(3, 100px);
     grid-template-rows: repeat(3, 100px);
   }
-  .button {
-    padding-left: 1rem; padding-right: 1rem;
-    padding-top: 0.5rem; padding-bottom: 0.5rem;
-    font-size: 0.8rem;
-  }
 }
+
 @media (max-width: 723px) {
   .fields {
     grid-template-columns: repeat(3, 70px);
@@ -706,6 +373,7 @@ header {
     position: relative;
   }
 }
+
 @media (max-width: 600px) {
   .mainPage {
     flex-direction: column;
@@ -718,29 +386,6 @@ header {
       justify-content: center;
       margin: 0;
     }
-  }
-  nav {
-    padding: 0.5rem 0.75rem;
-  }
-  nav h1 {
-    font-size: 0.9rem;
-    margin: 0 0 0.4rem;
-  }
-  header {
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.3rem;
-    font-size: 0.55rem;
-  }
-  .genBadge {
-    font-size: 0.5rem;
-    padding: 0.2rem 0.4rem;
-  }
-  .resetButton {
-    margin-left: 0;
-    padding: 0.25rem 0.4rem;
-    font-size: 0.5rem;
   }
 }
 </style>
