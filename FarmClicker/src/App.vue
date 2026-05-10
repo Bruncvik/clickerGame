@@ -7,7 +7,7 @@ import UpgradesIcon from "./assets/Upgrades_icon.webp";
 import MarketIcon from "./assets/Market_icon.webp";
 import SettingsIcon from "./assets/Settings_icon.webp";
 import AchievementsIcon from "./assets/Achievements_icon.webp";
-import RebirthIcon from "./assets/Rebirth_icon.png";
+import RebirthIcon from "./assets/Rebirth_icon.webp";
 import PotatoCrop1 from "./assets/PotatoCrop1.webp";
 import PotatoCrop2 from "./assets/PotatoCrop2.webp";
 import PotatoCrop3 from "./assets/PotatoCrop3.webp";
