@@ -1,46 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-
-type CropShopItem = {
-  id: string;
-  name: string;
-  cost: number;
-  icon: string;
-  canAfford: boolean;
-};
-
-type CropUnlockItem = {
-  id: string;
-  name: string;
-  cost: number;
-  icon: string;
-  unlocked: boolean;
-  canAfford: boolean;
-};
-
-type UpgradeItem = {
-  id: string;
-  name: string;
-  description: string;
-  cost: number;
-  purchased: boolean;
-  canAfford: boolean;
-  type?: string;
-  quantity?: number;
-};
-
-type AchievementItem = {
-  id: string;
-  name: string;
-  description: string;
-  earned: boolean;
-};
-
-type AchievementGroup = {
-  key: string;
-  label: string;
-  items: AchievementItem[];
-};
+import { computed } from 'vue';
+import type { CropShopItem, CropUnlockItem, UpgradeItem, AchievementGroup } from '../types';
+import UpgradeSection from './UpgradeSection.vue';
 
 const props = defineProps<{
   activeSection: string;
@@ -49,6 +10,11 @@ const props = defineProps<{
   cropUnlockItems: CropUnlockItem[];
   upgrades: UpgradeItem[];
   achievementGroups: AchievementGroup[];
+  generation: number;
+  goldMultiplier: number;
+  canRebirth: boolean;
+  totalGoldEarned: number;
+  rebirthThreshold: number;
 }>();
 
 const emit = defineEmits<{
@@ -56,6 +22,7 @@ const emit = defineEmits<{
   selectCrop: [cropId: string];
   buyCrop: [cropId: string];
   buyUpgrade: [upgradeId: string];
+  rebirth: [];
 }>();
 
 const SECTION_TITLES: Record<string, string> = {
@@ -65,17 +32,9 @@ const SECTION_TITLES: Record<string, string> = {
   market:       'Market',
   achievements: 'Achievements',
   tutorial:     'Tutorial',
+  rebirth:      'Rebirth',
 };
 
-const expandedSections = ref<Record<string, boolean>>({
-  field:  false,
-  boost:  false,
-  income: false,
-});
-
-const toggleSection = (section: string) => {
-  expandedSections.value[section] = !expandedSections.value[section];
-};
 
 const nonAutoUpgrades = computed(() => props.upgrades.filter(u => u.type !== 'auto'));
 const autoUpgrades    = computed(() => props.upgrades.filter(u => u.type === 'auto'));
@@ -131,68 +90,24 @@ const autoUpgrades    = computed(() => props.upgrades.filter(u => u.type === 'au
 
       <!-- ── UPGRADES ── -->
       <template v-else-if="activeSection === 'upgrades'">
-        <div v-if="nonAutoUpgrades.some(u => u.type === 'field' || !u.type)" class="upgradeSection">
-          <button class="sectionHeader" @click="toggleSection('field')">
-            <span class="sectionTitle">Fields</span>
-            <span class="sectionToggle" :class="{ expanded: expandedSections.field }">▼</span>
-          </button>
-          <div v-if="expandedSections.field" class="upgradesList">
-            <button
-              v-for="u in nonAutoUpgrades.filter(u => u.type === 'field' || !u.type)"
-              :key="u.id"
-              class="upgradeButton"
-              :class="{ purchased: u.purchased, unaffordable: !u.canAfford && !u.purchased }"
-              :disabled="!u.canAfford || u.purchased"
-              @click="emit('buyUpgrade', u.id)"
-            >
-              <span class="upgradeName">{{ u.name }}</span>
-              <span class="upgradeDesc">{{ u.description }}</span>
-              <span class="upgradeCost">{{ u.purchased ? 'Owned' : u.cost }}</span>
-            </button>
-          </div>
-        </div>
-
-        <div v-if="nonAutoUpgrades.some(u => u.type === 'boost')" class="upgradeSection">
-          <button class="sectionHeader" @click="toggleSection('boost')">
-            <span class="sectionTitle">Boosts</span>
-            <span class="sectionToggle" :class="{ expanded: expandedSections.boost }">▼</span>
-          </button>
-          <div v-if="expandedSections.boost" class="upgradesList">
-            <button
-              v-for="u in nonAutoUpgrades.filter(u => u.type === 'boost')"
-              :key="u.id"
-              class="upgradeButton"
-              :class="{ purchased: u.purchased, unaffordable: !u.canAfford && !u.purchased }"
-              :disabled="!u.canAfford || u.purchased"
-              @click="emit('buyUpgrade', u.id)"
-            >
-              <span class="upgradeName">{{ u.name }}</span>
-              <span class="upgradeDesc">{{ u.description }}</span>
-              <span class="upgradeCost">{{ u.purchased ? 'Owned' : u.cost }}</span>
-            </button>
-          </div>
-        </div>
-
-        <div v-if="nonAutoUpgrades.some(u => u.type === 'income')" class="upgradeSection">
-          <button class="sectionHeader" @click="toggleSection('income')">
-            <span class="sectionTitle">Income</span>
-            <span class="sectionToggle" :class="{ expanded: expandedSections.income }">▼</span>
-          </button>
-          <div v-if="expandedSections.income" class="upgradesList">
-            <button
-              v-for="u in nonAutoUpgrades.filter(u => u.type === 'income')"
-              :key="u.id"
-              class="upgradeButton"
-              :class="{ purchased: u.purchased, unaffordable: !u.canAfford && !u.purchased }"
-              :disabled="!u.canAfford || u.purchased"
-              @click="emit('buyUpgrade', u.id)"
-            >
-              <span class="upgradeName">{{ u.name }}</span>
-              <span class="upgradeDesc">{{ u.description }}</span>
-              <span class="upgradeCost">{{ u.purchased ? 'Owned' : u.cost }}</span>
-            </button>
-          </div>
-        </div>
+        <UpgradeSection
+          v-if="nonAutoUpgrades.some(u => u.type === 'field' || !u.type)"
+          label="Fields"
+          :upgrades="nonAutoUpgrades.filter(u => u.type === 'field' || !u.type)"
+          @buy-upgrade="emit('buyUpgrade', $event)"
+        />
+        <UpgradeSection
+          v-if="nonAutoUpgrades.some(u => u.type === 'boost')"
+          label="Boosts"
+          :upgrades="nonAutoUpgrades.filter(u => u.type === 'boost')"
+          @buy-upgrade="emit('buyUpgrade', $event)"
+        />
+        <UpgradeSection
+          v-if="nonAutoUpgrades.some(u => u.type === 'income')"
+          label="Income"
+          :upgrades="nonAutoUpgrades.filter(u => u.type === 'income')"
+          @buy-upgrade="emit('buyUpgrade', $event)"
+        />
       </template>
 
       <!-- ── MARKET ── -->
@@ -238,6 +153,50 @@ const autoUpgrades    = computed(() => props.upgrades.filter(u => u.type === 'au
         </div>
       </template>
 
+      <!-- ── REBIRTH ── -->
+      <template v-else-if="activeSection === 'rebirth'">
+        <div class="rebirthSection">
+          <div class="rebirthGen">Generation {{ generation }}</div>
+
+          <div class="rebirthRow">
+            <span class="rebirthLabel">Current multiplier</span>
+            <span class="rebirthValue">×{{ goldMultiplier.toFixed(2) }}</span>
+          </div>
+          <div class="rebirthRow">
+            <span class="rebirthLabel">After rebirth</span>
+            <span class="rebirthValue nextMult">×{{ (goldMultiplier + 0.25).toFixed(2) }}</span>
+          </div>
+
+          <div class="rebirthProgress">
+            <div class="progressLabel">
+              <span>Gold earned this run</span>
+              <span>{{ Math.min(totalGoldEarned, rebirthThreshold).toLocaleString() }} / {{ rebirthThreshold.toLocaleString() }}</span>
+            </div>
+            <div class="progressBar">
+              <div class="progressFill" :style="{ width: Math.min(100, totalGoldEarned / rebirthThreshold * 100) + '%' }"></div>
+            </div>
+          </div>
+
+          <div class="rebirthWarning">
+            <p>Resets on rebirth:</p>
+            <ul>
+              <li>Gold, crops &amp; seeds</li>
+              <li>Fields &amp; upgrades</li>
+              <li>Achievements</li>
+            </ul>
+            <p>Your Generation and Gold Multiplier persist forever.</p>
+          </div>
+
+          <button
+            class="rebirthButton"
+            :disabled="!canRebirth"
+            @click="emit('rebirth')"
+          >
+            {{ canRebirth ? `Rebirth → Gen ${generation + 1}` : `Need ${rebirthThreshold.toLocaleString()} gold` }}
+          </button>
+        </div>
+      </template>
+
       <!-- ── TUTORIAL ── -->
       <template v-else-if="activeSection === 'tutorial'">
         <div class="tutorialSection">
@@ -268,7 +227,7 @@ const autoUpgrades    = computed(() => props.upgrades.filter(u => u.type === 'au
           <p>One-time permanent upgrades split into three groups:</p>
           <ul>
             <li><strong>Fields</strong> — unlock additional farm plots (up to 9). Costs rise steeply: 150 → 500 → 1,500 → 5,000 → …</li>
-            <li><strong>Boosts</strong> — each Time Boost doubles minutes skipped per click (5→10→20→40→80 min). Costs: 200 → 800 → 3,000 → 12,000g.</li>
+            <li><strong>Boosts</strong> — each Time Boost doubles minutes skipped per click (5→10→20→40→80 min). Costs: 500 → 3,000 → 18,000 → 100,000g.</li>
             <li><strong>Income</strong> — add passive gold per second, earned even while idle.</li>
           </ul>
         </div>
@@ -412,51 +371,11 @@ const autoUpgrades    = computed(() => props.upgrades.filter(u => u.type === 'au
   margin: 0;
 }
 
-/* ── Shared upgrade styles ── */
-.upgradeSection {
-  margin-bottom: 0.75rem;
-}
-
-.sectionHeader {
-  width: 100%;
-  border: none;
-  background-color: var(--button-color);
-  padding: 0.65rem 0.5rem;
-  cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: bold;
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin: 0;
-  border-bottom: 2px solid var(--border-color);
-}
-
-.sectionHeader:hover {
-  background-color: var(--button-hover-color);
-}
-
-.sectionTitle {
-  flex: 1;
-  text-align: left;
-}
-
-.sectionToggle {
-  transition: transform 0.2s;
-  font-size: 0.75rem;
-}
-
-.sectionToggle.expanded {
-  transform: rotate(180deg);
-}
 
 .upgradesList {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  padding-top: 0.4rem;
 }
 
 .upgradeButton {
@@ -469,6 +388,8 @@ const autoUpgrades    = computed(() => props.upgrades.filter(u => u.type === 'au
   cursor: pointer;
   text-align: left;
   transition: background-color 0.1s;
+  font-family: inherit;
+  color: inherit;
 }
 
 .upgradeButton:hover:not(:disabled) {
@@ -511,6 +432,109 @@ const autoUpgrades    = computed(() => props.upgrades.filter(u => u.type === 'au
   padding: 0.2rem 0.4rem;
   margin-top: 0.2rem;
   display: inline-block;
+}
+
+/* ── Rebirth ── */
+.rebirthSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.rebirthGen {
+  text-align: center;
+  font-size: 1rem;
+  font-weight: bold;
+  padding: 0.6rem;
+  background-color: var(--button-selected-color);
+  border: 2px solid var(--border-color);
+}
+
+.rebirthRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.6rem;
+  border: 2px solid var(--border-color);
+}
+
+.rebirthLabel {
+  font-size: 0.65rem;
+  opacity: 0.75;
+}
+
+.rebirthValue {
+  font-size: 0.85rem;
+  font-weight: bold;
+  color: #d4af37;
+}
+
+.rebirthValue.nextMult {
+  color: #8fdf50;
+}
+
+.rebirthProgress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.progressLabel {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.6rem;
+  opacity: 0.8;
+}
+
+.progressBar {
+  height: 10px;
+  background: rgba(255,255,255,0.08);
+  border: 2px solid var(--border-color);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: #d4af37;
+  transition: width 0.5s ease;
+}
+
+.rebirthWarning {
+  font-size: 0.6rem;
+  line-height: 1.7;
+  opacity: 0.75;
+  border-top: 2px solid var(--border-color);
+  padding-top: 0.6rem;
+}
+
+.rebirthWarning p { margin: 0 0 0.2rem; }
+
+.rebirthWarning ul {
+  margin: 0 0 0.4rem;
+  padding-left: 1.1rem;
+}
+
+.rebirthButton {
+  width: 100%;
+  padding: 0.8rem;
+  border: 4px solid var(--border-color);
+  background-color: #5a1f7a;
+  color: #fff;
+  font-weight: bold;
+  font-size: 0.75rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background-color 0.1s;
+}
+
+.rebirthButton:not(:disabled):hover {
+  background-color: #7a2fa0;
+}
+
+.rebirthButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background-color: #444;
 }
 
 /* ── Achievements ── */

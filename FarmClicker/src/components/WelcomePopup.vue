@@ -19,7 +19,7 @@ const emit = defineEmits<{ close: [] }>();
         <li>
           <span class="stepNum">2</span>
           <div class="stepText">
-            <strong>Click the farm</strong>
+            <strong>Click the grid with fields</strong>
             <span>Every click skips time — crops grow and harvest automatically.</span>
           </div>
         </li>

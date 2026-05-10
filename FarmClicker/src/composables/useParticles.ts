@@ -2,7 +2,7 @@ import Leaf1 from '../assets/LeafParticle_1.webp';
 import Leaf2 from '../assets/LeafParticle_2.webp';
 
 const LEAVES = [Leaf1, Leaf2];
-const COUNT = 7;
+const COUNT = 12;
 const DURATION_MS = 700;
 
 export function useParticles() {
@@ -12,7 +12,7 @@ export function useParticles() {
       img.src = LEAVES[Math.floor(Math.random() * LEAVES.length)]!;
 
       const angle = Math.random() * 360;
-      const dist  = 40 + Math.random() * 60;
+      const dist  = 50 + Math.random() * 80;
       const size  = 16 + Math.random() * 20;
       const spin  = (Math.random() - 0.5) * 540;
 

@@ -6,6 +6,24 @@
   --button-selected-color: #dba953;
 }
 
+@media (max-width: 600px) {
+  :root {
+    --bg-image: url(../src/assets/Mobile_Farm_bg.png);
+  }
+}
+
+@media (min-width: 1900px) {
+  html {
+    font-size: 19px;
+  }
+}
+
+@media (min-width: 2200px) {
+  html {
+    font-size: 22px;
+  }
+}
+
 body {
   margin: 0;
   padding: 0;

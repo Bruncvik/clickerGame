@@ -7,6 +7,7 @@ import UpgradesIcon from "./assets/Upgrades_icon.webp";
 import MarketIcon from "./assets/Market_icon.webp";
 import SettingsIcon from "./assets/Settings_icon.webp";
 import AchievementsIcon from "./assets/Achievements_icon.webp";
+import RebirthIcon from "./assets/Rebirth_icon.png";
 import PotatoCrop1 from "./assets/PotatoCrop1.webp";
 import PotatoCrop2 from "./assets/PotatoCrop2.webp";
 import PotatoCrop3 from "./assets/PotatoCrop3.webp";
@@ -29,12 +30,13 @@ import CropField from "./components/CropField.vue";
 import StatBar from "./components/StatBar.vue";
 import SidePanel from "./components/SidePanel.vue";
 import WelcomePopup from "./components/WelcomePopup.vue";
-import { ACHIEVEMENT_DEFS } from "./stores/gameStore";
+import { ACHIEVEMENT_DEFS, REBIRTH_THRESHOLD } from "./stores/gameStore";
 import Farmer_icon from "./assets/Farmer_icon.webp";
 import Tractor_icon from "./assets/Tractor_icon.webp";
 import AutoHarvester_icon from "./assets/AutoHarvester_icon.webp";
 import { useGameStore } from "./stores/gameStore";
 import { useParticles } from "./composables/useParticles";
+import { useToast } from "./composables/useToast";
 
 const gameStore = useGameStore();
 const { burst } = useParticles();
@@ -57,15 +59,17 @@ function dismissWelcome() {
 
 const activePanelSection = ref<string | null>(null);
 const goldPulse = ref(false);
-const showOfflineIncomePopup = ref(false);
-const achievementToast = ref<{ name: string; description: string } | null>(null);
-const criticalHarvest = ref(false);
+const offlineIncomePopup = useToast<number>(3000);
+const achievementToast = useToast<{ name: string; description: string }>(4000);
+const criticalHarvestToast = useToast<true>(1800);
+
+// Top-level ref aliases so Vue auto-unwraps them in the template
+const offlineIncomeVisible = offlineIncomePopup.value;
+const achievementToastData = achievementToast.value;
+const criticalHarvestVisible = criticalHarvestToast.value;
 let lastEventSpawnAt = 0;
 let timerId: number | null = null;
 let goldPulseTimeoutId: number | null = null;
-let offlineIncomePopupTimeoutId: number | null = null;
-let achievementToastTimeoutId: number | null = null;
-let criticalHarvestTimeoutId: number | null = null;
 let saveOnExit: (() => void) | null = null;
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -165,12 +169,20 @@ function onDocClick(e: MouseEvent) {
 function showAchievementNotification(id: string) {
   const def = ACHIEVEMENT_DEFS.find(a => a.id === id);
   if (!def) return;
-  if (achievementToastTimeoutId !== null) clearTimeout(achievementToastTimeoutId);
-  achievementToast.value = def;
-  achievementToastTimeoutId = window.setTimeout(() => {
-    achievementToast.value = null;
-    achievementToastTimeoutId = null;
-  }, 4000);
+  achievementToast.show(def);
+}
+
+function onRebirth() {
+  const nextGen = gameStore.generation + 1;
+  const nextMult = (gameStore.goldMultiplier + 0.25).toFixed(2);
+  const confirmed = window.confirm(
+    `Rebirth to Generation ${nextGen}?\n\nAll progress (gold, crops, fields, upgrades, achievements) resets.\nYour Gold Multiplier will become ×${nextMult} permanently.`
+  );
+  if (confirmed) {
+    gameStore.rebirth();
+    activePanelSection.value = null;
+    gameStore.initAutoClickers();
+  }
 }
 
 function selectCrop(cropId: string) {
@@ -220,11 +232,7 @@ function getFieldCropImage(cropId: string | null, progress: number) {
 
 onMounted(() => {
   if (gameStore.offlineIncomeGained > 0) {
-    showOfflineIncomePopup.value = true;
-
-    offlineIncomePopupTimeoutId = window.setTimeout(() => {
-      showOfflineIncomePopup.value = false;
-    }, 3000);
+    offlineIncomePopup.show(gameStore.offlineIncomeGained);
   }
 
   timerId = window.setInterval(() => {
@@ -237,18 +245,13 @@ onMounted(() => {
       lastEventSpawnAt = now;
     }
 
-    // Apply passive income
-    gameStore.money += gameStore.passiveIncomePerSecond;
+    // Apply passive income (scaled by generation multiplier)
+    gameStore.money += gameStore.passiveIncomePerSecond * gameStore.goldMultiplier;
     
     const { gainedGold, critical } = gameStore.completeReadyFields();
 
     if (critical) {
-      criticalHarvest.value = true;
-      if (criticalHarvestTimeoutId !== null) clearTimeout(criticalHarvestTimeoutId);
-      criticalHarvestTimeoutId = window.setTimeout(() => {
-        criticalHarvest.value = false;
-        criticalHarvestTimeoutId = null;
-      }, 1800);
+      criticalHarvestToast.show(true);
     }
 
     gameStore.checkAchievements();
@@ -297,17 +300,9 @@ onBeforeUnmount(() => {
     clearTimeout(goldPulseTimeoutId);
   }
 
-  if (offlineIncomePopupTimeoutId !== null) {
-    clearTimeout(offlineIncomePopupTimeoutId);
-  }
-
-  if (achievementToastTimeoutId !== null) {
-    clearTimeout(achievementToastTimeoutId);
-  }
-
-  if (criticalHarvestTimeoutId !== null) {
-    clearTimeout(criticalHarvestTimeoutId);
-  }
+  offlineIncomePopup.clear();
+  achievementToast.clear();
+  criticalHarvestToast.clear();
 
   gameStore.persistProgress();
 
@@ -328,11 +323,14 @@ onBeforeUnmount(() => {
       <header>
         <div class="goldStatWrap">
           <StatBar :value="gameStore.money" currency="Gold" :pulse="goldPulse"/>
-          <div v-if="showOfflineIncomePopup" class="offlineIncomePopup">
+          <div v-if="offlineIncomeVisible" class="offlineIncomePopup">
             +{{ Math.round(gameStore.offlineIncomeGained * 100) / 100 }} while away
           </div>
         </div>
         <StatBar :value="`${gameStore.timePerClickMinutes} minutes`" currency="Time per click"/>
+        <div v-if="gameStore.generation > 0" class="genBadge">
+          Gen {{ gameStore.generation }} · ×{{ gameStore.goldMultiplier.toFixed(2) }}
+        </div>
         <button class="resetButton" @click="onResetClick">Reset</button>
           <button class="testButton" @click="addTestGold">+100 Gold</button>
         <div class="autoClickersWrap">
@@ -347,12 +345,20 @@ onBeforeUnmount(() => {
         <MenuButton
           :title="'Achievements'"
           :icon="AchievementsIcon"
+          :active="activePanelSection === 'achievements'"
           @click="openPanel('achievements')"
         />
         <MenuButton
           :title="'Tutorial'"
           :icon="SettingsIcon"
+          :active="activePanelSection === 'tutorial'"
           @click="openPanel('tutorial')"
+        />
+        <MenuButton
+          :title="'Rebirth'"
+          :icon="RebirthIcon"
+          :active="activePanelSection === 'rebirth'"
+          @click="openPanel('rebirth')"
         />
       </section>
       <section class="fields" @click="skipTime">
@@ -391,24 +397,30 @@ onBeforeUnmount(() => {
         :crop-unlock-items="unlockedCropsList"
         :upgrades="upgradesList"
         :achievement-groups="achievementGroups"
+        :generation="gameStore.generation"
+        :gold-multiplier="gameStore.goldMultiplier"
+        :can-rebirth="gameStore.canRebirth"
+        :total-gold-earned="gameStore.totalGoldEarned"
+        :rebirth-threshold="REBIRTH_THRESHOLD"
         @close="activePanelSection = null"
         @select-crop="selectCrop"
         @buy-crop="buyCrop"
         @buy-upgrade="buyUpgrade"
+        @rebirth="onRebirth"
       />
     </main>
     <WelcomePopup v-if="showWelcome" @close="dismissWelcome" />
     <Transition name="critical-toast">
-      <div v-if="criticalHarvest" class="criticalToast">
+      <div v-if="criticalHarvestVisible" class="criticalToast">
         <span class="criticalLabel">Critical Harvest!</span>
         <span class="criticalDesc">3× gold earned</span>
       </div>
     </Transition>
     <Transition name="achievement-toast">
-      <div v-if="achievementToast" class="achievementToast">
+      <div v-if="achievementToastData" class="achievementToast">
         <span class="toastLabel">Achievement Unlocked!</span>
-        <span class="toastName">{{ achievementToast.name }}</span>
-        <span class="toastDesc">{{ achievementToast.description }}</span>
+        <span class="toastName">{{ achievementToastData.name }}</span>
+        <span class="toastDesc">{{ achievementToastData.description }}</span>
       </div>
     </Transition>
   </article>
@@ -462,6 +474,16 @@ header {
   white-space: nowrap;
   animation: fadeAway 3s ease forwards;
   pointer-events: none;
+}
+
+.genBadge {
+  font-size: 0.6rem;
+  padding: 0.3rem 0.6rem;
+  background: #5a1f7a;
+  color: #e8c8ff;
+  font-weight: bold;
+  border: 2px solid var(--border-color);
+  white-space: nowrap;
 }
 
 .resetButton {
@@ -691,17 +713,38 @@ header {
 @media (max-width: 600px) {
   .mainPage {
     flex-direction: column;
-    gap: 2rem;
+    gap: 0.5rem;
 
     .menuButtons {
       flex-direction: row;
-      gap: 1rem;
+      gap: 0.4rem;
       flex-wrap: wrap;
+      justify-content: center;
+      margin: 0;
     }
   }
+  nav {
+    padding: 0.5rem 0.75rem;
+  }
+  nav h1 {
+    font-size: 0.9rem;
+    margin: 0 0 0.4rem;
+  }
   header {
-    flex-direction: column;
-     gap: 1rem;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.3rem;
+    font-size: 0.55rem;
+  }
+  .genBadge {
+    font-size: 0.5rem;
+    padding: 0.2rem 0.4rem;
+  }
+  .resetButton {
+    margin-left: 0;
+    padding: 0.25rem 0.4rem;
+    font-size: 0.5rem;
   }
 }
 </style>

@@ -1,50 +1,9 @@
-import { defineStore } from "pinia";                //vyuzit copilot
+import { defineStore } from "pinia";
+import type { CropType, Field, UpgradeType, AutoClickerInstance, AchievementDef } from '../types';
+export type { AchievementDef, AchievementCategory } from '../types';
 
 const GAME_STORAGE_KEY = "farm-clicker-game-v1";
-
-type CropType = {
-    id: string;
-    name: string;
-    cost: number;
-    unlockCost?: number;
-    unlocked: boolean;
-    growDurationMs: number;
-    reward: number;
-};
-
-type Field = {
-    id: number;
-    unlocked: boolean;
-    cropId: string | null;
-    plantedAt: number | null;
-    plantedSkippedMs: number | null;
-}
-
-type UpgradeType = {
-    id: string;
-    name: string;
-    description: string;
-    cost: number;
-    purchased: boolean;
-    type: 'field' | 'boost' | 'income' | 'auto';
-    quantity?: number;
-}
-
-type AutoClickerInstance = {
-    instanceId: string;
-    type: string;
-    x: number;
-    y: number;
-}
-
-export type AchievementCategory = 'farming' | 'gold' | 'upgrade' | 'time' | 'crops';
-
-export type AchievementDef = {
-    id: string;
-    name: string;
-    description: string;
-    category: AchievementCategory;
-};
+export const REBIRTH_THRESHOLD = 10_000;
 
 export const ACHIEVEMENT_DEFS: AchievementDef[] = [
     { id: 'harvest_1',         name: 'First Harvest',       description: 'Complete your first harvest',         category: 'farming' },
@@ -87,6 +46,7 @@ const calculateFieldProgress = (
 };
 
 const createDefaultState = () => ({
+    generation: 0,
     money: 25,
     moneyPerClick: 1,
     timePerClickMinutes: 5,
@@ -234,7 +194,7 @@ const createDefaultState = () => ({
             id: "time_boost_1",
             name: "Time Boost I",
             description: "×2 time per click (5→10 min)",
-            cost: 200,
+            cost: 500,
             purchased: false,
             type: "boost",
         },
@@ -242,7 +202,7 @@ const createDefaultState = () => ({
             id: "time_boost_2",
             name: "Time Boost II",
             description: "×2 time per click (10→20 min)",
-            cost: 800,
+            cost: 3000,
             purchased: false,
             type: "boost",
         },
@@ -250,7 +210,7 @@ const createDefaultState = () => ({
             id: "time_boost_3",
             name: "Time Boost III",
             description: "×2 time per click (20→40 min)",
-            cost: 3000,
+            cost: 18000,
             purchased: false,
             type: "boost",
         },
@@ -258,7 +218,7 @@ const createDefaultState = () => ({
             id: "time_boost_4",
             name: "Time Boost IV",
             description: "×2 time per click (40→80 min)",
-            cost: 12000,
+            cost: 100000,
             purchased: false,
             type: "boost",
         },
@@ -290,7 +250,7 @@ const createDefaultState = () => ({
             id: "auto_person",
             name: "Farmhand (Person)",
             description: "Clicks once per second for you",
-            cost: 250,
+            cost: 85,
             purchased: false,
             type: "auto",
             quantity: 0,
@@ -360,6 +320,7 @@ const loadInitialState = () => {
             })),
             lastSavedAt: Date.now(),
             now: Date.now(),
+            generation: parsedState.generation ?? defaults.generation,
             totalGoldEarned: parsedState.totalGoldEarned ?? defaults.totalGoldEarned,
             totalHarvests: parsedState.totalHarvests ?? defaults.totalHarvests,
             earnedAchievementIds: Array.isArray(parsedState.earnedAchievementIds) ? parsedState.earnedAchievementIds : [],
@@ -417,6 +378,7 @@ export const useGameStore = defineStore("game", {
             }
 
             const stateToPersist = {
+                generation: this.generation,
                 money: this.money,
                 moneyPerClick: this.moneyPerClick,
                 timePerClickMinutes: this.timePerClickMinutes,
@@ -538,7 +500,7 @@ export const useGameStore = defineStore("game", {
                 const goldenIdx = this.fieldEvents.findIndex(e => e.fieldId === field.id && e.type === 'golden');
                 const isGolden = goldenIdx !== -1;
                 if (isGolden) this.fieldEvents.splice(goldenIdx, 1);
-                const reward = crop.reward * (isCritical ? 3 : 1) * (isGolden ? 3 : 1);
+                const reward = Math.round(crop.reward * (isCritical ? 3 : 1) * (isGolden ? 3 : 1) * this.goldMultiplier);
                 if (isCritical) critical = true;
 
                 this.money += reward;
@@ -609,7 +571,7 @@ export const useGameStore = defineStore("game", {
             }
 
             const actualCost = upgrade.type === 'auto'
-                ? Math.round(upgrade.cost * Math.pow(1.2, upgrade.quantity ?? 0))
+                ? Math.round(upgrade.cost * Math.pow(1.3, upgrade.quantity ?? 0))
                 : upgrade.cost;
 
             if (this.money < actualCost) {
@@ -720,6 +682,18 @@ export const useGameStore = defineStore("game", {
                 __autoClickerIntervalId = null;
             }
         },
+        rebirth() {
+            const nextGeneration = this.generation + 1;
+            this.stopAutoClickers();
+            const defaults = createDefaultState();
+            for (const key in defaults) {
+                (this as any)[key] = (defaults as any)[key];
+            }
+            this.generation = nextGeneration;
+            this.lastSavedAt = Date.now();
+            this.now = Date.now();
+            this.persistProgress();
+        },
         checkAchievements() {
             const earned = this.earnedAchievementIds;
             const check = (id: string, condition: boolean) => {
@@ -766,10 +740,16 @@ export const useGameStore = defineStore("game", {
         },
     },
     getters: {
+        goldMultiplier(state): number {
+            return 1 + state.generation * 0.25;
+        },
+        canRebirth(state): boolean {
+            return state.totalGoldEarned >= REBIRTH_THRESHOLD;
+        },
         autoClickerCurrentCost: (state) => (upgradeId: string) => {
             const u = state.upgrades.find(u => u.id === upgradeId);
             if (!u || u.type !== 'auto') return 0;
-            return Math.round(u.cost * Math.pow(1.2, u.quantity ?? 0));
+            return Math.round(u.cost * Math.pow(1.3, u.quantity ?? 0));
         },
         unlockedCrops(state) {
             return state.cropShopItems.filter((item) => item.unlocked);

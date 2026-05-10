@@ -67,9 +67,10 @@ const displayValue = computed(() => {
 }
 @media (max-width: 600px) {
   .stat {
-    padding: 0.5rem 0.25rem;
-    font-size: 0.7rem;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.55rem;
     justify-content: center;
+    border-width: 2px;
   }
 }
 </style>

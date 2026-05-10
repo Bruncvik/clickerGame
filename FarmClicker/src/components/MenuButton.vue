@@ -1,9 +1,9 @@
 <script setup lang="ts">
-const props = defineProps({
-    title: String,
-    icon: String,
-    active: Boolean,
-})
+const props = defineProps<{
+    title: string;
+    icon: string;
+    active?: boolean;
+}>()
 </script>
 
 <template>
@@ -13,7 +13,7 @@ const props = defineProps({
         </div>
 </template>
 
-<style>
+<style scoped>
 .button {
   padding-left: 2rem; padding-right: 2rem;
   padding-top: 1rem; padding-bottom: 1rem;
@@ -44,5 +44,15 @@ const props = defineProps({
   width: 3rem;
   background-size: contain;
   background-repeat: no-repeat;
+}
+@media (max-width: 600px) {
+  .button {
+    padding: 0.4rem;
+    border-width: 2px;
+  }
+  .icon {
+    height: 2rem;
+    width: 2rem;
+  }
 }
 </style>
