@@ -48,10 +48,7 @@ const calculateFieldProgress = (
 const createDefaultState = () => ({
     generation: 0,
     money: 25,
-    moneyPerClick: 1,
     timePerClickMinutes: 5,
-    autoClickers: 0,
-    autoClickerCost: 10,
     passiveIncomePerSecond: 0,
     offlineIncomeGained: 0,
     lastSavedAt: Date.now(),
@@ -229,6 +226,7 @@ const createDefaultState = () => ({
             cost: 400,
             purchased: false,
             type: "income",
+            incomeAmount: 0.0025,
         },
         {
             id: "income_boost_2",
@@ -237,6 +235,7 @@ const createDefaultState = () => ({
             cost: 3000,
             purchased: false,
             type: "income",
+            incomeAmount: 0.05,
         },
         {
             id: "income_boost_3",
@@ -245,6 +244,7 @@ const createDefaultState = () => ({
             cost: 20000,
             purchased: false,
             type: "income",
+            incomeAmount: 0.5,
         },
         {
             id: "auto_person",
@@ -298,7 +298,9 @@ const loadInitialState = () => {
         const savedFields = parsedState.fields ?? defaults.fields;
         const savedLastSavedAt = parsedState.lastSavedAt ?? defaults.lastSavedAt;
         const offlineSeconds = Math.max(0, (Date.now() - savedLastSavedAt) / 1000);
-        const offlineMoney = offlineSeconds * (parsedState.passiveIncomePerSecond ?? defaults.passiveIncomePerSecond);
+        const savedGeneration = parsedState.generation ?? defaults.generation;
+        const savedGoldMultiplier = 1 + savedGeneration * 0.25;
+        const offlineMoney = offlineSeconds * (parsedState.passiveIncomePerSecond ?? defaults.passiveIncomePerSecond) * savedGoldMultiplier;
 
         return {
             ...defaults,
@@ -380,10 +382,7 @@ export const useGameStore = defineStore("game", {
             const stateToPersist = {
                 generation: this.generation,
                 money: this.money,
-                moneyPerClick: this.moneyPerClick,
                 timePerClickMinutes: this.timePerClickMinutes,
-                autoClickers: this.autoClickers,
-                autoClickerCost: this.autoClickerCost,
                 passiveIncomePerSecond: this.passiveIncomePerSecond,
                 lastSavedAt: Date.now(),
                 totalSkippedMs: this.totalSkippedMs,
@@ -434,7 +433,6 @@ export const useGameStore = defineStore("game", {
         skipTime() {
             const skipMs = this.timePerClickMinutes * 60 * 1000;
             this.totalSkippedMs += skipMs;
-            this.persistProgress();
         },
         selectCropForPlanting(cropId: string) {
             const crop = this.cropShopItems.find((item) => item.id === cropId);
@@ -444,7 +442,6 @@ export const useGameStore = defineStore("game", {
             }
 
             this.selectedCropId = cropId;
-            this.persistProgress();
         },
         plantSelectedCrop(fieldId: number) {
             const field = this.fields.find((item) => item.id === fieldId);
@@ -510,7 +507,6 @@ export const useGameStore = defineStore("game", {
                 field.cropId = null;
                 field.plantedAt = null;
                 field.plantedSkippedMs = null;
-                this.selectedCropId = null;
                 didCompleteAnyField = true;
             });
 
@@ -519,32 +515,6 @@ export const useGameStore = defineStore("game", {
             }
 
             return { gainedGold, critical };
-        },
-        completeField(fieldId: number) {
-            const field = this.fields.find((item) => item.id === fieldId);
-
-            if (!field || !field.cropId || !field.plantedAt) {
-                return;
-            }
-
-            const crop = this.cropShopItems.find((item) => item.id === field.cropId);
-
-            if (!crop) {
-                return;
-            }
-
-            const progress = calculateFieldProgress(field, crop, this.now, this.totalSkippedMs);
-
-            if (progress < 1) {
-                return;
-            }
-
-            this.money += crop.reward;
-            field.cropId = null;
-            field.plantedAt = null;
-            field.plantedSkippedMs = null;
-            this.selectedCropId = null;
-            this.persistProgress();
         },
         buyCrop(cropId: string) {
             const crop = this.cropShopItems.find((item) => item.id === cropId);
@@ -634,9 +604,7 @@ export const useGameStore = defineStore("game", {
 
             // Apply income if it's an income upgrade
             if (upgrade.type === 'income') {
-                if (upgrade.id.startsWith('income_boost_')) {
-                    this.passiveIncomePerSecond += upgrade.id === 'income_boost_1' ? 0.0025 : upgrade.id === 'income_boost_2' ? 0.05 : 0.5;
-                }
+                this.passiveIncomePerSecond += upgrade.incomeAmount ?? 0;
             }
 
             this.persistProgress();

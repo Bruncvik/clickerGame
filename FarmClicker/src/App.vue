@@ -47,9 +47,6 @@ function onResetClick() {
   gameStore.resetGame();
 }
 
-function addTestGold() {
-  gameStore.money += 100;
-}
 const showWelcome = ref(localStorage.getItem('farm_clicker_welcomed') !== 'true');
 
 function dismissWelcome() {
@@ -332,8 +329,7 @@ onBeforeUnmount(() => {
           Gen {{ gameStore.generation }} · ×{{ gameStore.goldMultiplier.toFixed(2) }}
         </div>
         <button class="resetButton" @click="onResetClick">Reset</button>
-          <button class="testButton" @click="addTestGold">+100 Gold</button>
-        <div class="autoClickersWrap">
+<div class="autoClickersWrap">
           <span v-for="u in gameStore.upgrades.filter(x => x.type === 'auto' && x.purchased)" :key="u.id" class="autoIcon">
             {{ autoIconById[u.id] ?? 'đź¤–' }}
           </span>

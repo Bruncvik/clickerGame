@@ -25,6 +25,7 @@ export type UpgradeType = {
   purchased: boolean;
   type: 'field' | 'boost' | 'income' | 'auto';
   quantity?: number;
+  incomeAmount?: number;
 };
 
 export type AutoClickerInstance = {
@@ -68,7 +69,7 @@ export type UpgradeItem = {
   cost: number;
   purchased: boolean;
   canAfford: boolean;
-  type?: string;
+  type?: 'field' | 'boost' | 'income' | 'auto';
   quantity?: number;
 };
 
