@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import MenuButton from './components/MenuButton.vue';
 import GameHeader from './components/GameHeader.vue';
 import CropField from './components/CropField.vue';
@@ -17,10 +17,17 @@ import { ACHIEVEMENT_DEFS } from './data/achievements';
 import { useParticles } from './composables/useParticles';
 import { useGameLoop } from './composables/useGameLoop';
 import { cropImageById, autoIconById, getFieldCropImage } from './composables/useCropImages';
+import { setMusicVolume } from './audio/music';
 
 const gameStore = useGameStore();
 const { burst } = useParticles();
 const { goldPulse, offlineIncomeVisible, achievementToastData, criticalHarvestVisible } = useGameLoop();
+
+watch(
+  () => gameStore.musicVolume,
+  (volume) => setMusicVolume(volume),
+  { immediate: true }
+);
 
 const showWelcome = ref(localStorage.getItem('farm_clicker_welcomed') !== 'true');
 function dismissWelcome() {
@@ -134,7 +141,7 @@ function selectField(fieldId: number) {
     <main class="mainPage">
       <section class="menuButtons" @click.stop>
         <MenuButton title="Achievements" :icon="AchievementsIcon" :active="activePanelSection === 'achievements'" @click="openPanel('achievements')" />
-        <MenuButton title="Tutorial"     :icon="SettingsIcon"     :active="activePanelSection === 'tutorial'"     @click="openPanel('tutorial')" />
+        <MenuButton title="Settings"      :icon="SettingsIcon"     :active="activePanelSection === 'settings'"      @click="openPanel('settings')" />
         <MenuButton title="Rebirth"      :icon="RebirthIcon"      :active="activePanelSection === 'rebirth'"      @click="openPanel('rebirth')" />
       </section>
 
@@ -183,11 +190,14 @@ function selectField(fieldId: number) {
         :can-rebirth="gameStore.canRebirth"
         :total-gold-earned="gameStore.totalGoldEarned"
         :rebirth-threshold="REBIRTH_THRESHOLD"
+        :music-volume="gameStore.musicVolume"
         @close="activePanelSection = null"
         @select-crop="gameStore.selectCropForPlanting($event)"
         @buy-crop="gameStore.buyCrop($event)"
         @buy-upgrade="gameStore.buyUpgrade($event)"
         @rebirth="onRebirth"
+        @update-music-volume="gameStore.setMusicVolume($event)"
+        @open-section="openPanel($event)"
       />
     </main>
 

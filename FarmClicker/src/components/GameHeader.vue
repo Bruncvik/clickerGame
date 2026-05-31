@@ -16,7 +16,7 @@ const gameStore = useGameStore();
     <h1>Farm Clicker</h1>
     <header>
       <div class="goldStatWrap">
-        <StatBar :value="gameStore.money" currency="Gold" :pulse="goldPulse" />
+        <StatBar :value="gameStore.money" currency="Gold" :pulse="goldPulse" :fixed-width="true" />
         <div v-if="offlineIncomeVisible !== null" class="offlineIncomePopup">
           +{{ Math.round((offlineIncomeVisible ?? 0) * 100) / 100 }} while away
         </div>

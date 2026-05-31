@@ -7,6 +7,10 @@ const props = defineProps({
     pulse: {
       type: Boolean,
       default: false
+    },
+    fixedWidth: {
+      type: Boolean,
+      default: false
     }
 })
 
@@ -19,7 +23,7 @@ const displayValue = computed(() => {
 </script>
 
 <template>
-    <div class="stat" :class="{ pulse }">
+    <div class="stat" :class="{ pulse, fixedWidth }">
         <p>{{ currency }}: {{ displayValue }}</p>
     </div>
 </template>
@@ -38,6 +42,13 @@ const displayValue = computed(() => {
   &:hover {
     background-color: var(--button-hover-color);
   }
+}
+
+.fixedWidth {
+  width: 18rem;
+  box-sizing: border-box;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 @media (max-width: 1300px) {
   .stat {
@@ -71,6 +82,10 @@ const displayValue = computed(() => {
     font-size: 0.55rem;
     justify-content: center;
     border-width: 2px;
+  }
+
+  .fixedWidth {
+    width: 100%;
   }
 }
 </style>

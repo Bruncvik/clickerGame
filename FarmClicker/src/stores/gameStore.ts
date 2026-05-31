@@ -6,6 +6,7 @@ import { UPGRADE_DEFS } from '../data/upgrades';
 
 const GAME_STORAGE_KEY = 'farm-clicker-game-v1';
 export const REBIRTH_THRESHOLD = 10_000;
+const CHEAPEST_CROP_COST = Math.min(...CROP_DEFS.map(c => c.cost));
 
 const calculateFieldProgress = (field: Field, crop: CropType, now: number, totalSkippedMs: number) => {
   if (!field.cropId || !field.plantedAt) return 0;
@@ -17,6 +18,7 @@ const calculateFieldProgress = (field: Field, crop: CropType, now: number, total
 const createDefaultState = () => ({
   generation: 0,
   money: 25,
+  musicVolume: 0.3,
   timePerClickMinutes: 5,
   passiveIncomePerSecond: 0,
   offlineIncomeGained: 0,
@@ -37,6 +39,13 @@ const createDefaultState = () => ({
   autoClickerInstances: [] as AutoClickerInstance[],
 });
 
+function applyStarterSafetyNet(state: ReturnType<typeof createDefaultState>) {
+  const hasPlantedCrops = state.fields.some(field => !!field.cropId);
+  if (!hasPlantedCrops && state.money < CHEAPEST_CROP_COST) {
+    state.money = CHEAPEST_CROP_COST;
+  }
+}
+
 let __autoClickerIntervalId: number | null = null;
 
 const loadInitialState = () => {
@@ -54,11 +63,19 @@ const loadInitialState = () => {
     const offlineMoney = offlineSeconds
       * (parsedState.passiveIncomePerSecond ?? defaults.passiveIncomePerSecond)
       * (1 + savedGeneration * 0.25);
+    const loadedMoney = (parsedState.money ?? defaults.money) + offlineMoney;
+    const isEmptyLegacySave =
+      loadedMoney === 0 &&
+      (parsedState.totalGoldEarned ?? 0) === 0 &&
+      (parsedState.totalHarvests ?? 0) === 0 &&
+      (parsedState.earnedAchievementIds?.length ?? 0) === 0 &&
+      (parsedState.cropShopItems?.some(c => c.unlocked) ?? false) === false &&
+      (parsedState.upgrades?.some(u => u.purchased || (u.quantity ?? 0) > 0) ?? false) === false;
 
     return {
       ...defaults,
       ...parsedState,
-      money: (parsedState.money ?? defaults.money) + offlineMoney,
+      money: isEmptyLegacySave ? defaults.money : loadedMoney,
       offlineIncomeGained: offlineMoney,
       cropShopItems: defaults.cropShopItems.map(def => {
         const saved = parsedState.cropShopItems?.find(c => c.id === def.id);
@@ -80,6 +97,7 @@ const loadInitialState = () => {
       totalHarvests: parsedState.totalHarvests ?? defaults.totalHarvests,
       earnedAchievementIds: Array.isArray(parsedState.earnedAchievementIds) ? parsedState.earnedAchievementIds : [],
       pendingAchievements: [],
+      musicVolume: typeof parsedState.musicVolume === 'number' ? Math.min(1, Math.max(0, parsedState.musicVolume)) : defaults.musicVolume,
       autoClickerInstances: parsedState.autoClickerInstances ?? [],
     };
   } catch {
@@ -88,7 +106,11 @@ const loadInitialState = () => {
 };
 
 export const useGameStore = defineStore('game', {
-  state: () => loadInitialState(),
+  state: () => {
+    const state = loadInitialState();
+    applyStarterSafetyNet(state);
+    return state;
+  },
 
   actions: {
     spawnFieldEvent() {
@@ -123,6 +145,8 @@ export const useGameStore = defineStore('game', {
         }
       }
       this.fieldEvents = this.fieldEvents.filter(e => e.expiresAt > now);
+      applyStarterSafetyNet(this as ReturnType<typeof createDefaultState>);
+      this.persistProgress();
     },
 
     persistProgress() {
@@ -130,6 +154,7 @@ export const useGameStore = defineStore('game', {
       localStorage.setItem(GAME_STORAGE_KEY, JSON.stringify({
         generation: this.generation,
         money: this.money,
+        musicVolume: this.musicVolume,
         timePerClickMinutes: this.timePerClickMinutes,
         passiveIncomePerSecond: this.passiveIncomePerSecond,
         lastSavedAt: Date.now(),
@@ -158,6 +183,11 @@ export const useGameStore = defineStore('game', {
     },
 
     updateNow() { this.now = Date.now(); },
+
+    setMusicVolume(volume: number) {
+      this.musicVolume = Math.min(1, Math.max(0, volume));
+      this.persistProgress();
+    },
 
     skipTime() { this.totalSkippedMs += this.timePerClickMinutes * 60 * 1000; },
 

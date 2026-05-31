@@ -15,6 +15,7 @@ const props = defineProps<{
   canRebirth: boolean;
   totalGoldEarned: number;
   rebirthThreshold: number;
+  musicVolume: number;
 }>();
 
 const emit = defineEmits<{
@@ -23,6 +24,8 @@ const emit = defineEmits<{
   buyCrop: [cropId: string];
   buyUpgrade: [upgradeId: string];
   rebirth: [];
+  updateMusicVolume: [volume: number];
+  openSection: [section: string];
 }>();
 
 const SECTION_TITLES: Record<string, string> = {
@@ -31,6 +34,7 @@ const SECTION_TITLES: Record<string, string> = {
   upgrades:     'Upgrades',
   market:       'Market',
   achievements: 'Achievements',
+  settings:     'Settings',
   tutorial:     'Tutorial',
   rebirth:      'Rebirth',
 };
@@ -38,6 +42,16 @@ const SECTION_TITLES: Record<string, string> = {
 
 const nonAutoUpgrades = computed(() => props.upgrades.filter(u => u.type !== 'auto'));
 const autoUpgrades    = computed(() => props.upgrades.filter(u => u.type === 'auto'));
+const musicVolumePercent = computed(() => Math.round(props.musicVolume * 100));
+
+function onMusicVolumeInput(event: Event) {
+  const target = event.target as HTMLInputElement;
+  emit('updateMusicVolume', Number(target.value) / 100);
+}
+
+function openTutorial() {
+  emit('openSection', 'tutorial');
+}
 </script>
 
 <template>
@@ -193,6 +207,37 @@ const autoUpgrades    = computed(() => props.upgrades.filter(u => u.type === 'au
             @click="emit('rebirth')"
           >
             {{ canRebirth ? `Rebirth → Gen ${generation + 1}` : `Need ${rebirthThreshold.toLocaleString()} gold` }}
+          </button>
+        </div>
+      </template>
+
+      <!-- ── SETTINGS ── -->
+      <template v-else-if="activeSection === 'settings'">
+        <div class="settingsSection">
+          <h4 class="settingsHeading">Background Music</h4>
+          <div class="volumeRow">
+            <span class="volumeLabel">Volume</span>
+            <span class="volumeValue">{{ musicVolumePercent }}%</span>
+          </div>
+          <input
+            class="volumeSlider"
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            :value="musicVolumePercent"
+            aria-label="Background music volume"
+            @input="onMusicVolumeInput"
+          />
+          <p class="settingsNote">Your volume preference is saved automatically.</p>
+        </div>
+
+        <div class="settingsSection">
+          <h4 class="settingsHeading">Help</h4>
+          <p class="settingsNote">Need a refresher on planting, upgrades, or rebirths?</p>
+          <button class="tutorialAction" @click="openTutorial">
+            <span class="tutorialActionLabel">Open tutorial</span>
+            <span class="tutorialActionMeta">Planting, upgrades, rebirth</span>
           </button>
         </div>
       </template>
@@ -535,6 +580,94 @@ const autoUpgrades    = computed(() => props.upgrades.filter(u => u.type === 'au
   opacity: 0.45;
   cursor: not-allowed;
   background-color: #444;
+}
+
+.settingsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.75rem;
+  border: 2px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.settingsHeading {
+  margin: 0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.volumeRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.65rem;
+}
+
+.volumeLabel {
+  font-weight: bold;
+}
+
+.volumeValue {
+  min-width: 2.8rem;
+  text-align: right;
+}
+
+.volumeSlider {
+  width: 100%;
+  accent-color: var(--border-color);
+}
+
+.settingsNote {
+  margin: 0;
+  font-size: 0.6rem;
+  line-height: 1.4;
+}
+
+.tutorialAction {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.18rem;
+  padding: 0.8rem 0.85rem;
+  border: 3px solid var(--border-color);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
+    var(--button-color);
+  color: inherit;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transition: transform 0.1s ease, background-color 0.1s ease, box-shadow 0.1s ease;
+}
+
+.tutorialAction:hover {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)),
+    var(--button-hover-color);
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 4px 0 rgba(0, 0, 0, 0.08);
+}
+
+.tutorialAction:active {
+  transform: translateY(0);
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.12);
+}
+
+.tutorialActionLabel {
+  font-size: 0.72rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tutorialActionMeta {
+  font-size: 0.6rem;
+  opacity: 0.75;
 }
 
 /* ── Achievements ── */
