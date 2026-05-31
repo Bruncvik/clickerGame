@@ -2,7 +2,8 @@ import { Howl } from 'howler';
 
 // Recommended asset route: save background music files under
 // src/assets/audio/music/ e.g. src/assets/audio/music/ambient-day.mp3
-export const MUSIC_ASSET_PATH = '/src/assets/audio/music/ambient-day2.mp3';
+// Resolve asset URL so Vite includes and rewrites it during build
+export const MUSIC_ASSET_PATH = new URL('../assets/audio/music/ambient-day2.mp3', import.meta.url).href;
 
 let current: Howl | null = null;
 let currentSrc: string | null = null;
